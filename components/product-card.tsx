@@ -1,0 +1,106 @@
+import { formatPrice, type Product } from "@/lib/data";
+import { ApplianceArt } from "./appliance-art";
+
+export function ProductCard({ product }: { product: Product }) {
+  const discount =
+    product.price && product.oldPrice
+      ? Math.round((1 - product.price / product.oldPrice) * 100)
+      : null;
+
+  return (
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-brand-900/10 hover:border-brand-200">
+      {/* image area */}
+      <div className={`relative grid h-48 place-items-center bg-gradient-to-br ${product.tint}`}>
+        <ApplianceArt
+          kind={product.art}
+          className="h-28 w-28 text-brand-900/70 transition-transform duration-500 group-hover:scale-110"
+        />
+        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+          {discount !== null && (
+            <span className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
+              -{discount}%
+            </span>
+          )}
+          {product.badge && (
+            <span className="rounded-full bg-brand-950 px-2.5 py-1 text-[11px] font-semibold text-gold-300 shadow">
+              {product.badge}
+            </span>
+          )}
+        </div>
+        <button
+          aria-label="Add to wishlist"
+          className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-slate-500 opacity-0 shadow transition-all duration-300 group-hover:opacity-100 hover:text-red-500 hover:scale-110"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4.5 w-4.5">
+            <path d="M19 14c1.5-1.5 3-3.3 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3.4 1-4.5 2.5C10.9 4 9.3 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* body */}
+      <div className="flex flex-1 flex-col p-4">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">
+          {product.brand}
+        </p>
+        <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-slate-800 group-hover:text-brand-800 transition-colors">
+          {product.name}
+        </h3>
+
+        <div className="mt-2 flex items-center gap-1.5">
+          <Stars rating={product.rating} />
+          <span className="text-xs text-slate-400">({product.reviews})</span>
+        </div>
+
+        <div className="mt-auto pt-3">
+          {product.price ? (
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-lg font-extrabold text-brand-950">
+                {formatPrice(product.price)}
+              </span>
+              {product.oldPrice && (
+                <span className="text-xs text-slate-400 line-through">
+                  {formatPrice(product.oldPrice)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="font-display text-sm font-bold text-gold-600">
+              Inquire For Price
+            </span>
+          )}
+
+          <button className="mt-3 w-full rounded-xl bg-brand-900 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-700 active:scale-[0.98]">
+            Add to Cart
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span className="flex text-gold-500" aria-label={`${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <svg key={i} viewBox="0 0 20 20" className="h-3.5 w-3.5">
+          <defs>
+            <linearGradient id={`half-${i}-${rating}`}>
+              <stop offset="50%" stopColor="currentColor" />
+              <stop offset="50%" stopColor="#e2e8f0" />
+            </linearGradient>
+          </defs>
+          <path
+            fill={
+              rating >= i
+                ? "currentColor"
+                : rating >= i - 0.5
+                  ? `url(#half-${i}-${rating})`
+                  : "#e2e8f0"
+            }
+            d="M10 1.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L10 14.9l-5.3 2.7 1-5.8L1.5 7.7l5.9-.9z"
+          />
+        </svg>
+      ))}
+    </span>
+  );
+}
