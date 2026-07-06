@@ -505,6 +505,43 @@ export const testimonials: Testimonial[] = [
   },
 ];
 
+export const productGroups: {
+  id: string;
+  name: string;
+  products: Product[];
+}[] = [
+  { id: "air-conditioners", name: "Air Conditioners", products: airConditioners },
+  { id: "refrigerators", name: "Refrigerators", products: refrigerators },
+  { id: "air-coolers", name: "Air Coolers", products: airCoolers },
+  { id: "led-tvs", name: "LED TVs", products: ledTvs },
+];
+
+export interface ProductLookup {
+  product: Product;
+  categoryId: string;
+  categoryName: string;
+  related: Product[];
+}
+
+export function getProductById(id: string): ProductLookup | undefined {
+  for (const group of productGroups) {
+    const product = group.products.find((p) => p.id === id);
+    if (product) {
+      return {
+        product,
+        categoryId: group.id,
+        categoryName: group.name,
+        related: group.products.filter((p) => p.id !== id).slice(0, 4),
+      };
+    }
+  }
+  return undefined;
+}
+
+export function getAllProducts(): Product[] {
+  return productGroups.flatMap((group) => group.products);
+}
+
 export const brands = [
   "Haier",
   "Dawlance",

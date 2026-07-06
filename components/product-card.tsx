@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatPrice, type Product } from "@/lib/data";
 import { ApplianceArt } from "./appliance-art";
 
@@ -11,11 +12,16 @@ export function ProductCard({ product }: { product: Product }) {
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-brand-900/10 hover:border-brand-200">
       {/* image area */}
       <div className={`relative grid h-48 place-items-center bg-gradient-to-br ${product.tint}`}>
+        <Link
+          href={`/products/${product.id}`}
+          aria-label={product.name}
+          className="absolute inset-0"
+        />
         <ApplianceArt
           kind={product.art}
           className="h-28 w-28 text-brand-900/70 transition-transform duration-500 group-hover:scale-110"
         />
-        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+        <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
           {discount !== null && (
             <span className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
               -{discount}%
@@ -43,7 +49,7 @@ export function ProductCard({ product }: { product: Product }) {
           {product.brand}
         </p>
         <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-slate-800 group-hover:text-brand-800 transition-colors">
-          {product.name}
+          <Link href={`/products/${product.id}`}>{product.name}</Link>
         </h3>
 
         <div className="mt-2 flex items-center gap-1.5">
