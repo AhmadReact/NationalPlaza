@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   title: "National Electronics — Pakistan's Trusted Electronics Store Since 1946",
   description:
     "National Electronics has served Pakistan since 1946. Shop air conditioners, refrigerators, air coolers, LED TVs and all home appliances at the best prices with nationwide delivery.",
+  verification: {
+    other: {
+      "facebook-domain-verification": "t8hs3j6gl68tk6a2u77skwxmqm6wyj",
+    },
+  },
 };
 
 export default function RootLayout({
