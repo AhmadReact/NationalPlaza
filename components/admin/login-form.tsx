@@ -11,11 +11,6 @@ import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { toast } from "@/lib/store/snackbarSlice";
 import { isStaff } from "@/lib/rbac";
 
-const DEMO_LOGIN = {
-  email: "admin@example.com",
-  password: "Admin123!",
-} as const;
-
 type LoginFormValues = {
   email: string;
   password: string;
@@ -81,8 +76,8 @@ export function AdminLoginForm() {
 
           <Formik<LoginFormValues>
             initialValues={{
-              email: DEMO_LOGIN.email,
-              password: DEMO_LOGIN.password,
+              email: "",
+              password: "",
             }}
             validate={validate}
             onSubmit={async (values, helpers) => {
@@ -147,7 +142,7 @@ export function AdminLoginForm() {
                         type="email"
                         autoComplete="username"
                         className="w-full rounded-xl border-2 border-brand-900/10 bg-slate-50 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-brand-600 focus:bg-white"
-                        placeholder="admin@example.com"
+                        placeholder="you@example.com"
                       />
                     )}
                   </Field>
@@ -196,11 +191,6 @@ export function AdminLoginForm() {
               </Form>
             )}
           </Formik>
-
-          <p className="mt-5 rounded-xl bg-brand-50 px-3 py-2.5 text-center text-xs text-brand-800">
-            API: <span className="font-semibold">{DEMO_LOGIN.email}</span> /{" "}
-            <span className="font-semibold">{DEMO_LOGIN.password}</span>
-          </p>
         </div>
 
         <p className="mt-6 text-center text-sm text-brand-100/80">
