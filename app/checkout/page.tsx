@@ -1,0 +1,867 @@
+"use client";
+
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  useCreateAddressMutation,
+  useGetAddressesQuery,
+  useGetDeliveryMethodsQuery,
+  usePlaceGuestOrderMutation,
+  usePlaceOrderMutation,
+  usePreviewCheckoutMutation,
+  usePreviewGuestCheckoutMutation,
+  useValidateCouponMutation,
+  type CheckoutPreview,
+  type CreateAddressInput,
+  type GuestCheckoutAddressInput,
+} from "@/app/store/checkoutAPI";
+import { clearCartState, selectCart } from "@/app/store/cartSlice";
+import { loadCart } from "@/app/store/cartThunk";
+import { selectCustomerIsAuthenticated } from "@/app/store/customerAuthSlice";
+import { Footer } from "@/components/footer";
+import { Header } from "@/components/header";
+import { clearGuestToken, getGuestToken } from "@/lib/cart/guestToken";
+import { saveLastPlacedOrder } from "@/lib/order/lastOrder";
+import { formatPrice } from "@/lib/data";
+import { getFetchErrorMessage } from "@/lib/api/errorMessage";
+import {
+  CHECKOUT_PHONE_HELPER,
+  CHECKOUT_PHONE_LABEL,
+  isValidCheckoutPhone,
+} from "@/lib/phone";
+import { toast } from "@/lib/store/snackbarSlice";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+
+const emptyShipping: GuestCheckoutAddressInput = {
+  fullName: "",
+  line1: "",
+  city: "",
+  postalCode: "",
+  phone: "",
+  line2: "",
+  state: "",
+  country: "PK",
+};
+
+function isGuestAddressReady(address: GuestCheckoutAddressInput): boolean {
+  return Boolean(
+    address.fullName.trim().length >= 2 &&
+      address.line1.trim().length >= 2 &&
+      address.city.trim().length >= 2 &&
+      address.postalCode.trim().length >= 2 &&
+      isValidCheckoutPhone(address.phone ?? ""),
+  );
+}
+
+function PhoneHint() {
+  return (
+    <span className="mt-1 block text-xs text-slate-500">
+      {CHECKOUT_PHONE_HELPER} Use 03XXXXXXXXX, +92…, or 92….
+    </span>
+  );
+}
+
+export default function CheckoutPage() {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const isAuthenticated = useAppSelector(selectCustomerIsAuthenticated);
+  const cart = useAppSelector(selectCart);
+
+  const {
+    data: addressesData,
+    isLoading: addressesLoading,
+    refetch: refetchAddresses,
+  } = useGetAddressesQuery(undefined, { skip: !isAuthenticated });
+  const { data: deliveryData, isLoading: deliveryLoading } =
+    useGetDeliveryMethodsQuery();
+
+  const [previewCheckout, { isLoading: customerPreviewLoading }] =
+    usePreviewCheckoutMutation();
+  const [placeOrder, { isLoading: customerPlacing }] = usePlaceOrderMutation();
+  const [previewGuestCheckout, { isLoading: guestPreviewLoading }] =
+    usePreviewGuestCheckoutMutation();
+  const [placeGuestOrder, { isLoading: guestPlacing }] =
+    usePlaceGuestOrderMutation();
+  const [createAddress, { isLoading: creatingAddress }] =
+    useCreateAddressMutation();
+  const [validateCoupon] = useValidateCouponMutation();
+
+  const addresses = addressesData?.data ?? [];
+  const deliveryMethods = (deliveryData?.data ?? []).filter((d) => d.isActive);
+
+  const [shippingAddressId, setShippingAddressId] = useState("");
+  const [deliveryMethodId, setDeliveryMethodId] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplied, setCouponApplied] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const [preview, setPreview] = useState<CheckoutPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestShipping, setGuestShipping] =
+    useState<GuestCheckoutAddressInput>(emptyShipping);
+
+  const [addressForm, setAddressForm] = useState<CreateAddressInput>({
+    fullName: "",
+    line1: "",
+    city: "",
+    postalCode: "",
+    phone: "",
+    country: "PK",
+    isDefault: true,
+  });
+
+  const previewLoading = customerPreviewLoading || guestPreviewLoading;
+  const placing = customerPlacing || guestPlacing;
+
+  useEffect(() => {
+    void dispatch(loadCart());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!cart) return;
+    if ((cart.itemCount ?? 0) === 0 || (cart.items?.length ?? 0) === 0) {
+      router.replace("/cart");
+    }
+  }, [cart, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (!shippingAddressId && addresses.length > 0) {
+      const preferred =
+        addresses.find((a) => a.isDefault)?.id ?? addresses[0].id;
+      setShippingAddressId(preferred);
+    }
+    if (addresses.length === 0 && !addressesLoading) {
+      setShowAddressForm(true);
+    }
+  }, [addresses, shippingAddressId, addressesLoading, isAuthenticated]);
+
+  useEffect(() => {
+    if (!deliveryMethodId && deliveryMethods.length > 0) {
+      setDeliveryMethodId(deliveryMethods[0].id);
+    }
+  }, [deliveryMethods, deliveryMethodId]);
+
+  const canPreviewCustomer = Boolean(
+    isAuthenticated && shippingAddressId && deliveryMethodId,
+  );
+
+  const canPreviewGuest = Boolean(
+    !isAuthenticated &&
+      getGuestToken() &&
+      guestEmail.trim() &&
+      isValidCheckoutPhone(guestPhone) &&
+      deliveryMethodId &&
+      isGuestAddressReady(guestShipping),
+  );
+
+  const canPreview = canPreviewCustomer || canPreviewGuest;
+
+  useEffect(() => {
+    if (!canPreview) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        if (isAuthenticated) {
+          const result = await previewCheckout({
+            shippingAddressId,
+            deliveryMethodId,
+            billingSameAsShipping: true,
+            couponCode: couponApplied || undefined,
+            notes: notes || undefined,
+          }).unwrap();
+          if (!cancelled) {
+            setPreview(result.data);
+            setPreviewError(null);
+          }
+          return;
+        }
+
+        const guestToken = getGuestToken();
+        if (!guestToken) {
+          if (!cancelled) {
+            setPreview(null);
+            setPreviewError("Guest cart not found. Add items again.");
+          }
+          return;
+        }
+
+        const result = await previewGuestCheckout({
+          guestToken,
+          email: guestEmail.trim(),
+          phone: guestPhone.trim() || guestShipping.phone?.trim() || undefined,
+          shippingAddress: {
+            fullName: guestShipping.fullName.trim(),
+            line1: guestShipping.line1.trim(),
+            city: guestShipping.city.trim(),
+            postalCode: guestShipping.postalCode.trim(),
+            phone:
+              guestShipping.phone?.trim() || guestPhone.trim() || undefined,
+            line2: guestShipping.line2?.trim() || undefined,
+            state: guestShipping.state?.trim() || undefined,
+            country: guestShipping.country?.trim() || "PK",
+          },
+          billingSameAsShipping: true,
+          deliveryMethodId,
+          couponCode: couponApplied || undefined,
+          notes: notes || undefined,
+        }).unwrap();
+
+        if (!cancelled) {
+          setPreview(result.data);
+          setPreviewError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPreview(null);
+          setPreviewError(
+            getFetchErrorMessage(
+              error as { status?: number | string; data?: unknown },
+              "Could not preview totals.",
+            ),
+          );
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    canPreview,
+    isAuthenticated,
+    shippingAddressId,
+    deliveryMethodId,
+    couponApplied,
+    notes,
+    guestEmail,
+    guestPhone,
+    guestShipping,
+    previewCheckout,
+    previewGuestCheckout,
+  ]);
+
+  const selectedAddress = addresses.find((a) => a.id === shippingAddressId);
+  const selectedAddressPhoneOk = Boolean(
+    selectedAddress && isValidCheckoutPhone(selectedAddress.phone ?? ""),
+  );
+
+  const onCreateAddress = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!isValidCheckoutPhone(addressForm.phone ?? "")) {
+      dispatch(
+        toast.error(
+          "Enter a valid WhatsApp / mobile number (03XXXXXXXXX, +92…, or 92…).",
+        ),
+      );
+      return;
+    }
+    try {
+      const result = await createAddress({
+        ...addressForm,
+        phone: addressForm.phone?.trim(),
+      }).unwrap();
+      dispatch(toast.success("Address saved"));
+      setShippingAddressId(result.data.id);
+      setShowAddressForm(false);
+      await refetchAddresses();
+    } catch (error) {
+      dispatch(
+        toast.error(
+          getFetchErrorMessage(
+            error as { status?: number | string; data?: unknown },
+            "Failed to save address.",
+          ),
+        ),
+      );
+    }
+  };
+
+  const onApplyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) {
+      setCouponApplied(null);
+      return;
+    }
+    try {
+      await validateCoupon({
+        code,
+        subtotal: cart?.subtotal ?? preview?.subtotal ?? 0,
+      }).unwrap();
+      setCouponApplied(code.toUpperCase());
+      dispatch(toast.success("Coupon applied"));
+    } catch (error) {
+      setCouponApplied(null);
+      dispatch(
+        toast.error(
+          getFetchErrorMessage(
+            error as { status?: number | string; data?: unknown },
+            "Invalid coupon.",
+          ),
+        ),
+      );
+    }
+  };
+
+  const onPlaceOrder = async () => {
+    if (!deliveryMethodId) return;
+
+    try {
+      if (isAuthenticated) {
+        if (!shippingAddressId) return;
+        if (!selectedAddressPhoneOk) {
+          dispatch(
+            toast.error(
+              "Choose or add a shipping address with a WhatsApp / mobile number.",
+            ),
+          );
+          return;
+        }
+        const result = await placeOrder({
+          shippingAddressId,
+          deliveryMethodId,
+          billingSameAsShipping: true,
+          couponCode: couponApplied || undefined,
+          notes: notes || undefined,
+        }).unwrap();
+        saveLastPlacedOrder(result.data);
+        dispatch(clearCartState());
+        dispatch(toast.success("Order placed!"));
+        router.replace(`/orders/${result.data.id}?placed=1`);
+        return;
+      }
+
+      const guestToken = getGuestToken();
+      const contactPhone = guestPhone.trim() || guestShipping.phone?.trim() || "";
+      const shippingPhone =
+        guestShipping.phone?.trim() || guestPhone.trim() || "";
+
+      if (
+        !guestToken ||
+        !canPreviewGuest ||
+        !isValidCheckoutPhone(contactPhone) ||
+        !isValidCheckoutPhone(shippingPhone)
+      ) {
+        dispatch(
+          toast.error(
+            "Enter a valid WhatsApp / mobile number so we can send order updates.",
+          ),
+        );
+        return;
+      }
+
+      const result = await placeGuestOrder({
+        guestToken,
+        email: guestEmail.trim(),
+        phone: contactPhone,
+        shippingAddress: {
+          fullName: guestShipping.fullName.trim(),
+          line1: guestShipping.line1.trim(),
+          city: guestShipping.city.trim(),
+          postalCode: guestShipping.postalCode.trim(),
+          phone: shippingPhone,
+          line2: guestShipping.line2?.trim() || undefined,
+          state: guestShipping.state?.trim() || undefined,
+          country: guestShipping.country?.trim() || "PK",
+        },
+        billingSameAsShipping: true,
+        deliveryMethodId,
+        couponCode: couponApplied || undefined,
+        notes: notes || undefined,
+      }).unwrap();
+
+      saveLastPlacedOrder(result.data);
+      clearGuestToken();
+      dispatch(clearCartState());
+      dispatch(toast.success("Order placed!"));
+      router.replace(`/orders/${result.data.id}?placed=1`);
+    } catch (error) {
+      dispatch(
+        toast.error(
+          getFetchErrorMessage(
+            error as { status?: number | string; data?: unknown },
+            "Failed to place order.",
+          ),
+        ),
+      );
+    }
+  };
+
+  const loadingGate = deliveryLoading || (isAuthenticated && addressesLoading);
+
+  const summaryRows = useMemo(() => {
+    if (!preview) return [];
+    return [
+      { label: "Subtotal", value: formatPrice(preview.subtotal) },
+      ...(preview.discountAmount > 0
+        ? [
+            {
+              label: `Discount${preview.couponCode ? ` (${preview.couponCode})` : ""}`,
+              value: `−${formatPrice(preview.discountAmount)}`,
+            },
+          ]
+        : []),
+      {
+        label: `Shipping (${preview.deliveryMethodName})`,
+        value: formatPrice(preview.shippingAmount),
+      },
+      {
+        label: `Tax (${Math.round(preview.taxRate * 100)}%)`,
+        value: formatPrice(preview.taxAmount),
+      },
+    ];
+  }, [preview]);
+
+  if (loadingGate) {
+    return (
+      <>
+        <Header />
+        <main className="flex-1 px-4 py-16 text-center text-sm text-slate-500">
+          Loading checkout…
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <main className="flex-1 bg-gradient-to-b from-slate-50 to-white">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:py-14">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-950">
+                Checkout
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                {isAuthenticated
+                  ? "Confirm address, delivery, and place your order."
+                  : "Checkout as a guest — no account required."}
+              </p>
+            </div>
+            {!isAuthenticated && (
+              <Link
+                href="/login?next=/checkout"
+                className="text-sm font-semibold text-brand-700 hover:underline"
+              >
+                Have an account? Sign in
+              </Link>
+            )}
+          </div>
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
+            <div className="space-y-6">
+              {!isAuthenticated && (
+                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <h2 className="font-display text-lg font-extrabold text-brand-950">
+                    Contact
+                  </h2>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="block sm:col-span-2">
+                      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                        Email
+                      </span>
+                      <input
+                        type="email"
+                        required
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                      />
+                    </label>
+                    <label className="block sm:col-span-2">
+                      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                        {CHECKOUT_PHONE_LABEL}
+                      </span>
+                      <input
+                        type="tel"
+                        required
+                        inputMode="tel"
+                        autoComplete="tel"
+                        value={guestPhone}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setGuestPhone(value);
+                          setGuestShipping((prev) =>
+                            !prev.phone || prev.phone === guestPhone
+                              ? { ...prev, phone: value }
+                              : prev,
+                          );
+                        }}
+                        className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                      />
+                      <PhoneHint />
+                    </label>
+                  </div>
+                </section>
+              )}
+
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="font-display text-lg font-extrabold text-brand-950">
+                    Shipping address
+                  </h2>
+                  {isAuthenticated && addresses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddressForm((v) => !v)}
+                      className="text-sm font-semibold text-brand-700 hover:underline"
+                    >
+                      {showAddressForm ? "Cancel" : "Add new"}
+                    </button>
+                  )}
+                </div>
+
+                {isAuthenticated ? (
+                  <>
+                    {addresses.length > 0 && !showAddressForm && (
+                      <ul className="mt-4 space-y-3">
+                        {addresses.map((address) => (
+                          <li key={address.id}>
+                            <label className="flex cursor-pointer gap-3 rounded-2xl border-2 border-slate-200 p-4 has-[:checked]:border-brand-700">
+                              <input
+                                type="radio"
+                                name="shippingAddress"
+                                checked={shippingAddressId === address.id}
+                                onChange={() =>
+                                  setShippingAddressId(address.id)
+                                }
+                                className="mt-1"
+                              />
+                              <span className="text-sm">
+                                <span className="font-bold text-brand-950">
+                                  {address.fullName}
+                                </span>
+                                <span className="mt-1 block text-slate-500">
+                                  {address.line1}
+                                  {address.line2 ? `, ${address.line2}` : ""}
+                                  <br />
+                                  {address.city}
+                                  {address.state ? `, ${address.state}` : ""}{" "}
+                                  {address.postalCode}
+                                  <br />
+                                  {address.country}
+                                  {address.phone ? ` · ${address.phone}` : ""}
+                                </span>
+                                {!isValidCheckoutPhone(address.phone ?? "") ? (
+                                  <span className="mt-2 block text-xs font-semibold text-amber-700">
+                                    Add a WhatsApp / mobile number before using
+                                    this address.
+                                  </span>
+                                ) : null}
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {showAddressForm && (
+                      <form
+                        onSubmit={onCreateAddress}
+                        className="mt-4 space-y-3"
+                      >
+                        {(
+                          [
+                            ["fullName", "Full name"],
+                            ["line1", "Address line 1"],
+                            ["city", "City"],
+                            ["postalCode", "Postal code"],
+                            ["phone", CHECKOUT_PHONE_LABEL],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <label key={key} className="block">
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                              {label}
+                            </span>
+                            <input
+                              required
+                              type={key === "phone" ? "tel" : "text"}
+                              inputMode={key === "phone" ? "tel" : undefined}
+                              autoComplete={
+                                key === "phone" ? "tel" : undefined
+                              }
+                              value={addressForm[key] ?? ""}
+                              onChange={(e) =>
+                                setAddressForm((prev) => ({
+                                  ...prev,
+                                  [key]: e.target.value,
+                                }))
+                              }
+                              className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                            />
+                            {key === "phone" ? <PhoneHint /> : null}
+                          </label>
+                        ))}
+                        <button
+                          type="submit"
+                          disabled={creatingAddress}
+                          className="rounded-full bg-brand-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60"
+                        >
+                          {creatingAddress ? "Saving…" : "Save address"}
+                        </button>
+                      </form>
+                    )}
+                  </>
+                ) : (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {(
+                      [
+                        ["fullName", "Full name", true],
+                        ["phone", CHECKOUT_PHONE_LABEL, true],
+                        ["line1", "Address line 1", true],
+                        ["line2", "Address line 2", false],
+                        ["city", "City", true],
+                        ["state", "State / province", false],
+                        ["postalCode", "Postal code", true],
+                        ["country", "Country (ISO)", false],
+                      ] as const
+                    ).map(([key, label, required]) => (
+                      <label
+                        key={key}
+                        className={`block ${key === "line1" || key === "line2" || key === "fullName" || key === "phone" ? "sm:col-span-2" : ""}`}
+                      >
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                          {label}
+                        </span>
+                        <input
+                          required={required}
+                          type={key === "phone" ? "tel" : "text"}
+                          inputMode={key === "phone" ? "tel" : undefined}
+                          autoComplete={key === "phone" ? "tel" : undefined}
+                          value={guestShipping[key] ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (key === "phone") {
+                              setGuestShipping((prev) => ({
+                                ...prev,
+                                phone: value,
+                              }));
+                              setGuestPhone((prev) =>
+                                !prev || prev === guestShipping.phone
+                                  ? value
+                                  : prev,
+                              );
+                              return;
+                            }
+                            setGuestShipping((prev) => ({
+                              ...prev,
+                              [key]: value,
+                            }));
+                          }}
+                          className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                        />
+                        {key === "phone" ? <PhoneHint /> : null}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="font-display text-lg font-extrabold text-brand-950">
+                  Delivery method
+                </h2>
+                <ul className="mt-4 space-y-3">
+                  {deliveryMethods.map((method) => (
+                    <li key={method.id}>
+                      <label className="flex cursor-pointer gap-3 rounded-2xl border-2 border-slate-200 p-4 has-[:checked]:border-brand-700">
+                        <input
+                          type="radio"
+                          name="deliveryMethod"
+                          checked={deliveryMethodId === method.id}
+                          onChange={() => setDeliveryMethodId(method.id)}
+                          className="mt-1"
+                        />
+                        <span className="flex-1 text-sm">
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-brand-950">
+                              {method.name}
+                            </span>
+                            <span className="font-bold">
+                              {formatPrice(method.price)}
+                            </span>
+                          </span>
+                          {method.description && (
+                            <span className="mt-1 block text-slate-500">
+                              {method.description}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="font-display text-lg font-extrabold text-brand-950">
+                  Coupon & notes
+                </h2>
+                <div className="mt-4 flex gap-2">
+                  <input
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Coupon code"
+                    className="flex-1 rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void onApplyCoupon()}
+                    className="rounded-full border-2 border-brand-900/15 px-4 py-2 text-sm font-semibold text-brand-900 hover:bg-brand-900 hover:text-white"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {couponApplied && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCouponApplied(null);
+                      setCouponCode("");
+                    }}
+                    className="mt-2 text-xs font-semibold text-slate-500 hover:text-red-600"
+                  >
+                    Remove coupon ({couponApplied})
+                  </button>
+                )}
+                <label className="mt-4 block">
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    Order notes
+                  </span>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                    className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                  />
+                </label>
+              </section>
+            </div>
+
+            <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="font-display text-lg font-extrabold text-brand-950">
+                Order total
+              </h2>
+
+              <ul className="mt-4 space-y-2 border-b border-slate-100 pb-4 text-sm">
+                {(preview
+                  ? preview.items.map((item) => ({
+                      id: item.productId,
+                      name: item.productName,
+                      quantity: item.quantity,
+                      lineTotal: item.lineTotal,
+                    }))
+                  : (cart?.items ?? []).map((item) => ({
+                      id: item.productId,
+                      name: item.product.name,
+                      quantity: item.quantity,
+                      lineTotal: item.lineTotal,
+                    }))
+                ).map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex justify-between gap-3"
+                  >
+                    <span className="text-slate-600">
+                      {item.name} × {item.quantity}
+                    </span>
+                    <span className="font-semibold">
+                      {formatPrice(item.lineTotal)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {previewLoading && (
+                <p className="mt-4 text-sm text-slate-400">Updating totals…</p>
+              )}
+              {previewError && (
+                <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {previewError}
+                </p>
+              )}
+
+              <dl className="mt-4 space-y-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500">Subtotal</dt>
+                  <dd className="font-semibold text-brand-950">
+                    {formatPrice(preview?.subtotal ?? cart?.subtotal ?? 0)}
+                  </dd>
+                </div>
+
+                {preview ? (
+                  <>
+                    {summaryRows
+                      .filter((row) => row.label !== "Subtotal")
+                      .map((row) => (
+                        <div
+                          key={row.label}
+                          className="flex justify-between gap-3"
+                        >
+                          <dt className="text-slate-500">{row.label}</dt>
+                          <dd className="font-semibold text-brand-950">
+                            {row.value}
+                          </dd>
+                        </div>
+                      ))}
+                    <div className="flex justify-between gap-3 border-t border-slate-100 pt-3">
+                      <dt className="font-bold text-brand-950">Total</dt>
+                      <dd className="font-display text-xl font-extrabold text-brand-950">
+                        {formatPrice(preview.total)}
+                      </dd>
+                    </div>
+                  </>
+                ) : (
+                  !previewError && (
+                    <p className="pt-1 text-xs text-slate-400">
+                      {isAuthenticated
+                        ? "Select address and delivery to calculate shipping & tax."
+                        : "Enter email, shipping, and delivery to calculate shipping & tax."}
+                    </p>
+                  )
+                )}
+              </dl>
+
+              <button
+                type="button"
+                disabled={
+                  !preview ||
+                  placing ||
+                  !!previewError ||
+                  (isAuthenticated && !selectedAddressPhoneOk)
+                }
+                onClick={() => void onPlaceOrder()}
+                className="mt-6 w-full rounded-full bg-gold-400 py-3 text-sm font-bold text-brand-950 shadow-lg shadow-gold-500/25 transition-all hover:bg-gold-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {placing ? "Placing order…" : "Place order"}
+              </button>
+              {isAuthenticated &&
+              shippingAddressId &&
+              !selectedAddressPhoneOk ? (
+                <p className="mt-2 text-center text-xs text-amber-700">
+                  The selected address needs a WhatsApp / mobile number.
+                </p>
+              ) : null}
+              <Link
+                href="/cart"
+                className="mt-3 flex w-full items-center justify-center text-sm font-semibold text-slate-500 hover:text-brand-700"
+              >
+                Back to cart
+              </Link>
+            </aside>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}

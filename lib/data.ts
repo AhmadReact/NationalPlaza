@@ -15,6 +15,10 @@ export type ArtKind =
 
 export interface Product {
   id: string;
+  /** UUID used by cart APIs (falls back to id when absent). */
+  productId?: string;
+  /** URL slug when different from id. */
+  slug?: string;
   brand: string;
   name: string;
   /** undefined means "Inquire for price" */
@@ -25,6 +29,8 @@ export interface Product {
   art: ArtKind;
   tint: string; // tailwind gradient classes for the card image area
   badge?: string;
+  /** Optional real product image from API */
+  imageUrl?: string;
 }
 
 export interface Category {

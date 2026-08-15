@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import { formatPrice, type Product } from "@/lib/data";
+import { AddToCartButton } from "./add-to-cart-button";
 import { ApplianceArt } from "./appliance-art";
 
 export function ProductCard({ product }: { product: Product }) {
+  const href = `/products/${product.slug || product.id}`;
+  const cartProductId = product.productId || product.id;
   const discount =
     product.price && product.oldPrice
       ? Math.round((1 - product.price / product.oldPrice) * 100)
@@ -10,17 +15,23 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-brand-900/10 hover:border-brand-200">
-      {/* image area */}
-      <div className={`relative grid h-48 place-items-center bg-gradient-to-br ${product.tint}`}>
-        <Link
-          href={`/products/${product.id}`}
-          aria-label={product.name}
-          className="absolute inset-0"
-        />
-        <ApplianceArt
-          kind={product.art}
-          className="h-28 w-28 text-brand-900/70 transition-transform duration-500 group-hover:scale-110"
-        />
+      <div
+        className={`relative grid h-48 place-items-center overflow-hidden bg-gradient-to-br ${product.tint}`}
+      >
+        <Link href={href} aria-label={product.name} className="absolute inset-0" />
+        {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <ApplianceArt
+            kind={product.art}
+            className="h-28 w-28 text-brand-900/70 transition-transform duration-500 group-hover:scale-110"
+          />
+        )}
         <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
           {discount !== null && (
             <span className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
@@ -37,19 +48,24 @@ export function ProductCard({ product }: { product: Product }) {
           aria-label="Add to wishlist"
           className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-slate-500 opacity-0 shadow transition-all duration-300 group-hover:opacity-100 hover:text-red-500 hover:scale-110"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4.5 w-4.5">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-4.5 w-4.5"
+          >
             <path d="M19 14c1.5-1.5 3-3.3 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3.4 1-4.5 2.5C10.9 4 9.3 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7z" />
           </svg>
         </button>
       </div>
 
-      {/* body */}
       <div className="flex flex-1 flex-col p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">
           {product.brand}
         </p>
-        <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-slate-800 group-hover:text-brand-800 transition-colors">
-          <Link href={`/products/${product.id}`}>{product.name}</Link>
+        <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-slate-800 transition-colors group-hover:text-brand-800">
+          <Link href={href}>{product.name}</Link>
         </h3>
 
         <div className="mt-2 flex items-center gap-1.5">
@@ -75,9 +91,10 @@ export function ProductCard({ product }: { product: Product }) {
             </span>
           )}
 
-          <button className="mt-3 w-full rounded-xl bg-brand-900 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-700 active:scale-[0.98]">
-            Add to Cart
-          </button>
+          <AddToCartButton
+            productId={cartProductId}
+            className="mt-3 w-full rounded-xl bg-brand-900 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+          />
         </div>
       </div>
     </article>

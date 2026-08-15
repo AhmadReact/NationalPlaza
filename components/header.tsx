@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { selectCartItemCount } from "@/app/store/cartSlice";
+import { useAppSelector } from "@/lib/store/hooks";
 
 const navLinks = [
   { label: "Air Conditioners", href: "#air-conditioners" },
@@ -15,11 +17,11 @@ const navLinks = [
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const cartCount = useAppSelector(selectCartItemCount);
 
   return (
     <header className="sticky top-0 z-50 shadow-lg shadow-brand-950/5">
-      {/* Top bar */}
-      <div className="bg-brand-950 text-brand-100 text-xs sm:text-sm">
+      <div className="bg-brand-950 text-xs text-brand-100 sm:text-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2">
           <p className="flex items-center gap-2">
             <TruckIcon className="h-4 w-4 text-gold-400" />
@@ -27,11 +29,11 @@ export function Header() {
             <span className="sm:hidden">Nationwide shipping</span>
           </p>
           <div className="flex items-center gap-4">
-            <a href="tel:+923001234567" className="flex items-center gap-1.5 hover:text-gold-300 transition-colors">
+            <a href="tel:+923001234567" className="flex items-center gap-1.5 transition-colors hover:text-gold-300">
               <PhoneIcon className="h-3.5 w-3.5" />
               +92 300 1234567
             </a>
-            <a href="mailto:info@nationalelectronics.pk" className="hidden md:flex items-center gap-1.5 hover:text-gold-300 transition-colors">
+            <a href="mailto:info@nationalelectronics.pk" className="hidden items-center gap-1.5 transition-colors hover:text-gold-300 md:flex">
               <MailIcon className="h-3.5 w-3.5" />
               info@nationalelectronics.pk
             </a>
@@ -39,39 +41,38 @@ export function Header() {
         </div>
       </div>
 
-      {/* Main bar */}
-      <div className="bg-white/95 backdrop-blur border-b border-slate-200">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 sm:gap-6 px-4 py-3">
+      <div className="border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-6">
           <button
-            className="lg:hidden -ml-1 rounded-lg p-2 text-brand-950 hover:bg-slate-100"
+            className="-ml-1 rounded-lg p-2 text-brand-950 hover:bg-slate-100 lg:hidden"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Toggle menu"
           >
             <MenuIcon className="h-6 w-6" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-800 to-brand-950 font-display text-lg font-extrabold text-gold-400 shadow-md">
               N
             </span>
             <span className="leading-tight">
-              <span className="block font-display text-lg sm:text-xl font-extrabold tracking-tight text-brand-950">
+              <span className="block font-display text-lg font-extrabold tracking-tight text-brand-950 sm:text-xl">
                 National <span className="text-brand-600">Electronics</span>
               </span>
-              <span className="block text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-600">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-600 sm:text-[11px]">
                 Trusted since 1946
               </span>
             </span>
           </Link>
 
-          <div className="hidden md:flex flex-1 items-center">
-            <div className="flex w-full max-w-xl items-center overflow-hidden rounded-full border-2 border-brand-900/15 bg-slate-50 focus-within:border-brand-600 transition-colors">
+          <div className="hidden flex-1 items-center md:flex">
+            <div className="flex w-full max-w-xl items-center overflow-hidden rounded-full border-2 border-brand-900/15 bg-slate-50 transition-colors focus-within:border-brand-600">
               <input
                 type="search"
                 placeholder="Search ACs, refrigerators, coolers, TVs…"
                 className="w-full bg-transparent px-5 py-2.5 text-sm outline-none placeholder:text-slate-400"
               />
-              <button className="m-1 flex items-center gap-2 rounded-full bg-brand-900 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+              <button className="m-1 flex items-center gap-2 rounded-full bg-brand-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
                 <SearchIcon className="h-4 w-4" />
                 <span className="hidden lg:inline">Search</span>
               </button>
@@ -79,20 +80,32 @@ export function Header() {
           </div>
 
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
-            <IconButton label="Wishlist" badge={2}>
+            <Link
+              href="/login"
+              className="hidden rounded-full px-3 py-2 text-sm font-semibold text-brand-900 transition-colors hover:bg-brand-50 sm:inline"
+            >
+              Sign in
+            </Link>
+            <IconButton label="Wishlist">
               <HeartIcon className="h-5 w-5" />
             </IconButton>
-            <IconButton label="Cart" badge={3}>
+            <Link
+              href="/cart"
+              aria-label="Cart"
+              className="relative rounded-full p-2.5 text-brand-950 transition-colors hover:bg-brand-50"
+            >
               <CartIcon className="h-5 w-5" />
-            </IconButton>
+              {cartCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 grid h-4.5 w-4.5 min-w-[18px] place-items-center rounded-full bg-gold-500 text-[10px] font-bold text-brand-950">
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              )}
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav
-        className={`bg-brand-900 text-sm text-brand-100 ${menuOpen ? "block" : "hidden"} lg:block`}
-      >
+      <nav className={`bg-brand-900 text-sm text-brand-100 ${menuOpen ? "block" : "hidden"} lg:block`}>
         <div className="mx-auto max-w-7xl px-4">
           <ul className="flex flex-col lg:flex-row lg:items-center">
             {navLinks.map((link) => (
@@ -100,14 +113,14 @@ export function Header() {
                 <a
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className="block border-b-2 border-transparent px-4 py-3 font-medium hover:bg-brand-800 hover:text-gold-300 lg:hover:border-gold-400 transition-colors"
+                  className="block border-b-2 border-transparent px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300 lg:hover:border-gold-400"
                 >
                   {link.label}
                 </a>
               </li>
             ))}
             <li className="lg:ml-auto">
-              <span className="hidden lg:flex items-center gap-2 px-4 py-3 text-gold-300 font-semibold">
+              <span className="hidden items-center gap-2 px-4 py-3 font-semibold text-gold-300 lg:flex">
                 <SparkIcon className="h-4 w-4" />
                 Summer Sale is Live
               </span>
@@ -131,19 +144,18 @@ function IconButton({
   return (
     <button
       aria-label={label}
-      className="relative rounded-full p-2.5 text-brand-950 hover:bg-brand-50 transition-colors"
+      className="relative rounded-full p-2.5 text-brand-950 transition-colors hover:bg-brand-50"
     >
       {children}
       {badge !== undefined && (
-        <span className="absolute -top-0.5 -right-0.5 grid h-4.5 w-4.5 min-w-[18px] place-items-center rounded-full bg-gold-500 text-[10px] font-bold text-brand-950">
-          {badge}
+        <span className="absolute -right-0.5 -top-0.5 grid h-4.5 w-4.5 min-w-[18px] place-items-center rounded-full bg-gold-500 text-[10px] font-bold text-brand-950">
+          {badge > 99 ? "99+" : badge}
         </span>
       )}
     </button>
   );
 }
 
-/* ---- icons ---- */
 function svgProps(className?: string) {
   return {
     viewBox: "0 0 24 24",
