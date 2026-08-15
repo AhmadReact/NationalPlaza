@@ -29,9 +29,9 @@ export function Header() {
             <span className="sm:hidden">Nationwide shipping</span>
           </p>
           <div className="flex items-center gap-4">
-            <a href="tel:+923001234567" className="flex items-center gap-1.5 transition-colors hover:text-gold-300">
+            <a href="tel:+923344376840" className="flex items-center gap-1.5 transition-colors hover:text-gold-300">
               <PhoneIcon className="h-3.5 w-3.5" />
-              +92 300 1234567
+              +92 334 4376840
             </a>
             <a href="mailto:info@nationalelectronics.pk" className="hidden items-center gap-1.5 transition-colors hover:text-gold-300 md:flex">
               <MailIcon className="h-3.5 w-3.5" />

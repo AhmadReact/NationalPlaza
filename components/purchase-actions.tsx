@@ -98,7 +98,7 @@ export function PurchaseActions({
       </button>
 
       <a
-        href="https://wa.me/923001234567"
+        href="https://wa.me/923344376840"
         target="_blank"
         rel="noopener noreferrer"
         className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border-2 border-emerald-500/40 bg-emerald-50 px-7 py-3 text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-100"

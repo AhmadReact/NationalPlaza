@@ -8,7 +8,7 @@ import { WhatsAppSettingsCard } from "@/components/admin/whatsapp-settings-card"
 const fields = [
   { label: "Store name", value: "National Electronics" },
   { label: "Support email", value: "info@nationalelectronics.pk" },
-  { label: "Phone", value: "+92 300 1234567" },
+  { label: "Phone", value: "+92 334 4376840" },
   { label: "Currency", value: "PKR (Rs.)" },
   { label: "Timezone", value: "Asia/Karachi (PKT)" },
   { label: "Order prefix", value: "NE-" },

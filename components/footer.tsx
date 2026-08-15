@@ -76,13 +76,13 @@ export function Footer() {
           </p>
           <ul className="mt-5 space-y-2 text-sm text-white/70">
             <li>
-              <span className="font-semibold text-white/90">Address:</span> Main
-              Electronics Market, Saddar, Rawalpindi, Pakistan
+              <span className="font-semibold text-white/90">Address:</span>{" "}
+              Thana Bazar, Arifwala, Pakistan
             </li>
             <li>
               <span className="font-semibold text-white/90">Phone:</span>{" "}
-              <a href="tel:+923001234567" className="hover:text-gold-300 transition-colors">
-                +92 300 1234567
+              <a href="tel:+923344376840" className="hover:text-gold-300 transition-colors">
+                +92 334 4376840
               </a>
             </li>
             <li>

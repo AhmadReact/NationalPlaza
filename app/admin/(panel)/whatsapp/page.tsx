@@ -209,7 +209,7 @@ function AdminWhatsAppPageInner() {
                 maxLength={20}
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="923001234567"
+                placeholder="923344376840"
                 className="w-full rounded-xl border-2 border-brand-900/10 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-brand-600 focus:bg-white"
               />
             </label>
