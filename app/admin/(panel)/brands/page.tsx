@@ -404,7 +404,7 @@ export default function AdminBrandsPage() {
             type="button"
             aria-label="Close dialog"
             className="absolute inset-0 cursor-default"
-            onClick={closeDialog}
+            onClick={() => closeDialog()}
           />
           <div
             role="dialog"
@@ -421,7 +421,7 @@ export default function AdminBrandsPage() {
               </h2>
               <button
                 type="button"
-                onClick={closeDialog}
+                onClick={() => closeDialog()}
                 disabled={isSaving}
                 className="rounded-lg px-2 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-brand-950 disabled:opacity-50"
               >
@@ -553,7 +553,7 @@ export default function AdminBrandsPage() {
               <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
                 <button
                   type="button"
-                  onClick={closeDialog}
+                  onClick={() => closeDialog()}
                   disabled={isSaving}
                   className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-brand-950 hover:bg-brand-50 disabled:opacity-60"
                 >
