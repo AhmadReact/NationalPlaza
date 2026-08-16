@@ -88,7 +88,7 @@ export const heroSlides: HeroSlide[] = [
     subtitle:
       "DC inverter split ACs from Haier, Gree, TCL & Kenwood — cut your bills, not your comfort.",
     cta: "Shop Air Conditioners",
-    href: "#air-conditioners",
+    href: "/categories/air-conditioner",
     gradient: "from-brand-950 via-brand-900 to-brand-700",
     art: "ac",
     stat: { value: "30%", label: "Max Discount" },
@@ -101,7 +101,7 @@ export const heroSlides: HeroSlide[] = [
     subtitle:
       "Super Asia, Royal & Canon coolers with ice-box technology. Big airflow, tiny power bill.",
     cta: "Shop Air Coolers",
-    href: "#air-coolers",
+    href: "/categories/air-coolers",
     gradient: "from-teal-950 via-teal-900 to-cyan-700",
     art: "cooler",
     stat: { value: "12hr", label: "Cooling Runtime" },
@@ -114,7 +114,7 @@ export const heroSlides: HeroSlide[] = [
     subtitle:
       "Dawlance, Haier, PEL & Homage inverter refrigerators — delivered anywhere in Pakistan.",
     cta: "Shop Refrigerators",
-    href: "#refrigerators",
+    href: "/categories/refrigerator",
     gradient: "from-emerald-950 via-emerald-900 to-emerald-700",
     art: "fridge",
     stat: { value: "0km", label: "Delivery Charges" },
@@ -127,7 +127,7 @@ export const heroSlides: HeroSlide[] = [
     subtitle:
       "Android & Google TV from Samsung, TCL and Haier with 2-year official warranty.",
     cta: "Shop LED TVs",
-    href: "#led-tvs",
+    href: "/categories/led-tv",
     gradient: "from-indigo-950 via-violet-900 to-purple-700",
     art: "tv",
     stat: { value: "2yr", label: "Official Warranty" },

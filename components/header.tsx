@@ -1,23 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { selectCartItemCount } from "@/app/store/cartSlice";
+import { useGetStoreCategoryTreeQuery } from "@/app/store/customerAPI";
 import { useAppSelector } from "@/lib/store/hooks";
 
-const navLinks = [
-  { label: "Air Conditioners", href: "#air-conditioners" },
-  { label: "Refrigerators", href: "#refrigerators" },
-  { label: "Air Coolers", href: "#air-coolers" },
-  { label: "LED TVs", href: "#led-tvs" },
-  { label: "All Categories", href: "#categories" },
-  { label: "Why Us", href: "#why-us" },
-  { label: "Reviews", href: "#reviews" },
+const fallbackNavLinks = [
+  { label: "Air Conditioners", href: "/categories/air-conditioner" },
+  { label: "Refrigerators", href: "/categories/refrigerator" },
+  { label: "Air Coolers", href: "/categories/air-coolers" },
+  { label: "LED TVs", href: "/categories/led-tv" },
+];
+
+const staticLinks = [
+  { label: "All Categories", href: "/categories" },
+  { label: "Why Us", href: "/#why-us" },
+  { label: "Reviews", href: "/#reviews" },
 ];
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const cartCount = useAppSelector(selectCartItemCount);
+  const { data: treeData } = useGetStoreCategoryTreeQuery();
+
+  const navLinks = useMemo(() => {
+    const roots = (treeData?.data ?? [])
+      .filter((node) => node.isActive !== false)
+      .slice(0, 5)
+      .map((node) => ({
+        label: node.name,
+        href: `/categories/${node.slug}`,
+      }));
+
+    const categoryLinks = roots.length > 0 ? roots : fallbackNavLinks;
+    return [...categoryLinks, ...staticLinks];
+  }, [treeData?.data]);
 
   return (
     <header className="sticky top-0 z-50 shadow-lg shadow-brand-950/5">
@@ -110,13 +128,13 @@ export function Header() {
           <ul className="flex flex-col lg:flex-row lg:items-center">
             {navLinks.map((link) => (
               <li key={link.href}>
-                <a
+                <Link
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className="block border-b-2 border-transparent px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300 lg:hover:border-gold-400"
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
             <li className="lg:ml-auto">

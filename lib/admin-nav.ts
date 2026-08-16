@@ -54,7 +54,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Fulfillment",
     items: [
       { label: "Orders", href: "/admin/orders", icon: "orders", permission: "ORDERS" },
-      { label: "Delivery", href: "/admin/shipping", icon: "shipping", permission: "ORDERS" },
+      { label: "Delivery", href: "/admin/delivery-methods", icon: "shipping", permission: "ORDERS" },
     ],
   },
   {
@@ -132,6 +132,7 @@ const PATH_PERMISSIONS: Array<[string, Permission | null]> = [
   ["/admin/categories", "PRODUCTS"],
   ["/admin/brands", "PRODUCTS"],
   ["/admin/orders", "ORDERS"],
+  ["/admin/delivery-methods", "ORDERS"],
   ["/admin/shipping", "ORDERS"],
   ["/admin/inventory", "INVENTORY"],
   ["/admin/coupons", "COUPONS"],

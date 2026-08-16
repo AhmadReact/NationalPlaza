@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AdminPanel,
@@ -42,6 +42,44 @@ function formatDate(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function ExpandableError({ message }: { message: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [truncated, setTruncated] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    if (expanded) {
+      setTruncated(true);
+      return;
+    }
+    setTruncated(el.scrollWidth > el.clientWidth);
+  }, [expanded, message]);
+
+  return (
+    <div className="mt-0.5 max-w-xs">
+      <p
+        ref={textRef}
+        className={`text-xs text-red-600 ${
+          expanded ? "whitespace-pre-wrap break-words" : "truncate"
+        }`}
+      >
+        {message}
+      </p>
+      {truncated ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          className="mt-0.5 text-[11px] font-semibold text-brand-800 hover:underline"
+        >
+          {expanded ? "See less" : "See more"}
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 export function WhatsAppNotificationsPanel({
@@ -262,12 +300,7 @@ export function WhatsAppNotificationsPanel({
                     </p>
                   ) : null}
                   {item.errorMessage ? (
-                    <p
-                      className="mt-0.5 max-w-xs truncate text-xs text-red-600"
-                      title={item.errorMessage}
-                    >
-                      {item.errorMessage}
-                    </p>
+                    <ExpandableError message={item.errorMessage} />
                   ) : null}
                 </div>,
                 item.orderNumber ? (

@@ -1,4 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
+import { toCatalogQueryString, type CatalogApiParams } from "@/lib/catalog-query";
 import { baseQueryWithInterceptor } from "@/lib/store/baseQuery";
 
 export type ProductStatus = "ACTIVE" | "INACTIVE";
@@ -30,6 +31,31 @@ export type ProductSpecification = {
   updatedAt: string;
 };
 
+export type ProductAttributeOptionRef = {
+  id: string;
+  label?: string;
+  slug?: string;
+  value?: string;
+};
+
+export type ProductAttributeValue = {
+  attributeId: string;
+  optionIds?: string[];
+  optionId?: string;
+  attribute?: {
+    id: string;
+    name: string;
+    slug?: string;
+    inputType?: string;
+  };
+  options?: ProductAttributeOptionRef[];
+};
+
+export type ProductAttributeWrite = {
+  attributeId: string;
+  optionIds: string[];
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -52,17 +78,12 @@ export type Product = {
   images: ProductImage[];
   thumbnail: ProductImage | null;
   specifications: ProductSpecification[];
+  attributeValues?: ProductAttributeValue[];
   createdAt: string;
   updatedAt: string;
 };
 
-export type ProductListParams = {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: ProductStatus;
-  brandId?: string;
-  categoryId?: string;
+export type ProductListParams = CatalogApiParams & {
   isFeatured?: boolean;
   lowStockOnly?: boolean;
 };
@@ -82,6 +103,7 @@ export type CreateProductInput = {
   lowStock?: number;
   isFeatured?: boolean;
   status?: ProductStatus;
+  attributeValues?: ProductAttributeWrite[];
 };
 
 export type UpdateProductInput = {
@@ -100,6 +122,12 @@ export type UpdateProductInput = {
   lowStock?: number;
   isFeatured?: boolean;
   status?: ProductStatus;
+  attributeValues?: ProductAttributeWrite[];
+};
+
+export type ReplaceProductAttributesInput = {
+  productId: string;
+  items: ProductAttributeWrite[];
 };
 
 export type UploadProductImagesInput = {
@@ -189,13 +217,28 @@ export type ApiMutationResponse<T> = {
   meta: unknown;
 };
 
-function toQueryString(params: ProductListParams): string {
-  const searchParams = new URLSearchParams();
+function toQueryString(
+  params: ProductListParams & { isFeatured?: boolean; lowStockOnly?: boolean },
+): string {
+  const searchParams = new URLSearchParams(
+    toCatalogQueryString({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      status: params.status,
+      brandId: params.brandId,
+      categoryId: params.categoryId,
+      minPrice: params.minPrice,
+      maxPrice: params.maxPrice,
+      inStock: params.inStock,
+      attrs: params.attrs,
+      isFeatured: params.isFeatured,
+    }).replace(/^\?/, ""),
+  );
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === "") return;
-    searchParams.set(key, String(value));
-  });
+  if (params.lowStockOnly !== undefined) {
+    searchParams.set("lowStockOnly", String(params.lowStockOnly));
+  }
 
   const query = searchParams.toString();
   return query ? `?${query}` : "";
@@ -212,7 +255,7 @@ function toImagesFormData(files: File[]): FormData {
 export const productApi = createApi({
   reducerPath: "productApi",
   baseQuery: baseQueryWithInterceptor,
-  tagTypes: ["Product", "ProductImage", "ProductSpecification"],
+  tagTypes: ["Product", "ProductImage", "ProductSpecification", "ProductAttribute"],
   endpoints: (builder) => ({
     // ── Products CRUD ──────────────────────────────────────────────
     getProducts: builder.query<
@@ -227,6 +270,10 @@ export const productApi = createApi({
           status: params?.status,
           brandId: params?.brandId,
           categoryId: params?.categoryId,
+          minPrice: params?.minPrice,
+          maxPrice: params?.maxPrice,
+          inStock: params?.inStock,
+          attrs: params?.attrs,
           isFeatured: params?.isFeatured,
           lowStockOnly: params?.lowStockOnly,
         })}`,
@@ -302,6 +349,21 @@ export const productApi = createApi({
       }),
       invalidatesTags: (_result, _error, id) => [
         { type: "Product", id },
+        { type: "Product", id: "LIST" },
+      ],
+    }),
+    replaceProductAttributes: builder.mutation<
+      ApiMutationResponse<ProductAttributeValue[]>,
+      ReplaceProductAttributesInput
+    >({
+      query: ({ productId, items }) => ({
+        url: `/products/${encodeURIComponent(productId)}/attributes`,
+        method: "PUT",
+        body: { items },
+      }),
+      invalidatesTags: (_result, _error, { productId }) => [
+        { type: "Product", id: productId },
+        { type: "ProductAttribute", id: productId },
         { type: "Product", id: "LIST" },
       ],
     }),
@@ -503,6 +565,7 @@ export const {
   useUpdateProductMutation,
   useDeleteProductMutation,
   useRestoreProductMutation,
+  useReplaceProductAttributesMutation,
   useGetProductImagesQuery,
   useLazyGetProductImagesQuery,
   useUploadProductImagesMutation,

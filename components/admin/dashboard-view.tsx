@@ -1175,8 +1175,8 @@ export function AdminDashboardView() {
                         icon: <ConfirmationNumberRoundedIcon />,
                       },
                       {
-                        href: "/admin/shipping",
-                        label: "Shipping zones",
+                        href: "/admin/delivery-methods",
+                        label: "Delivery methods",
                         icon: <LocalShippingRoundedIcon />,
                       },
                       {

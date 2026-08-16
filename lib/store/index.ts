@@ -21,6 +21,7 @@ import { emailApi } from "@/app/admin/(panel)/email/store/emailAPI";
 import { whatsappApi } from "@/app/admin/(panel)/whatsapp/store/whatsappAPI";
 import { productApi } from "@/app/admin/(panel)/products/store/productAPI";
 import { dashboardApi } from "@/app/admin/(panel)/store/dashboardAPI";
+import { deliveryApi } from "@/app/admin/(panel)/delivery-methods/store/deliveryAPI";
 import { customerApi } from "@/app/store/customerAPI";
 import { cartApi } from "@/app/store/cartAPI";
 import { cartReducer } from "@/app/store/cartSlice";
@@ -62,6 +63,7 @@ const rootReducer = combineReducers({
   [emailApi.reducerPath]: emailApi.reducer,
   [productApi.reducerPath]: productApi.reducer,
   [dashboardApi.reducerPath]: dashboardApi.reducer,
+  [deliveryApi.reducerPath]: deliveryApi.reducer,
   [customerApi.reducerPath]: customerApi.reducer,
   [cartApi.reducerPath]: cartApi.reducer,
   [checkoutApi.reducerPath]: checkoutApi.reducer,
@@ -94,6 +96,7 @@ export const makeStore = () => {
         emailApi.middleware,
         productApi.middleware,
         dashboardApi.middleware,
+        deliveryApi.middleware,
         customerApi.middleware,
         cartApi.middleware,
         checkoutApi.middleware,

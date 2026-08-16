@@ -107,6 +107,7 @@ export function HomeProducts() {
           title={section.title}
           tagline={section.tagline}
           products={section.products}
+          href={`/categories/${section.id}`}
           accent={section.accent}
         />
       ))}

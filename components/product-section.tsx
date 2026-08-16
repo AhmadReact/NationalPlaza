@@ -6,12 +6,14 @@ export function ProductSection({
   title,
   tagline,
   products,
+  href,
   accent = "brand",
 }: {
   id: string;
   title: string;
   tagline: string;
   products: Product[];
+  href?: string;
   accent?: "brand" | "teal" | "emerald" | "violet";
 }) {
   const accentBar = {
@@ -33,7 +35,7 @@ export function ProductSection({
             <p className="mt-1 text-sm text-slate-500">{tagline}</p>
           </div>
           <a
-            href="#"
+            href={href || `/categories/${id}`}
             className="group inline-flex items-center gap-2 rounded-full border-2 border-brand-900/15 px-5 py-2 text-sm font-semibold text-brand-900 transition-colors hover:border-brand-700 hover:bg-brand-900 hover:text-white"
           >
             View All

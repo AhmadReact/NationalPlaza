@@ -34,6 +34,7 @@ import {
 } from "@/app/admin/(panel)/products/store/productAPI";
 import { useGetBrandsQuery } from "@/app/admin/(panel)/brands/store/brandAPI";
 import {
+  useGetCategoryAttributesQuery,
   useGetCategoryTreeQuery,
   type CategoryTreeNode,
 } from "@/app/admin/(panel)/categories/store/categoryAPI";
@@ -41,6 +42,11 @@ import { formatPrice } from "@/lib/data";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { toast } from "@/lib/store/snackbarSlice";
 import { SortableList } from "@/components/admin/sortable-list";
+import {
+  ProductFilterFields,
+  selectionsFromAttributeValues,
+  toAttributeWritePayload,
+} from "@/app/admin/(panel)/products/product-filter-fields";
 
 type SpecRow = { name: string; value: string };
 
@@ -61,6 +67,7 @@ type ProductFormState = {
   status: ProductStatus;
   images: File[];
   specs: SpecRow[];
+  attributeValues: Record<string, string[]>;
 };
 
 const emptyForm: ProductFormState = {
@@ -80,6 +87,7 @@ const emptyForm: ProductFormState = {
   status: "ACTIVE",
   images: [],
   specs: [],
+  attributeValues: {},
 };
 
 const SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -195,6 +203,7 @@ export default function AdminProductsPage() {
   >({});
   const [newSpecRows, setNewSpecRows] = useState<SpecRow[]>([]);
   const [savingSpecId, setSavingSpecId] = useState<string | null>(null);
+  const [categoryChangedWarning, setCategoryChangedWarning] = useState(false);
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useGetProductsQuery({
@@ -210,6 +219,10 @@ export default function AdminProductsPage() {
 
   const { data: brandsData } = useGetBrandsQuery({ page: 1, limit: 100 });
   const { data: categoryTreeData } = useGetCategoryTreeQuery();
+  const { data: categoryAttributesData } = useGetCategoryAttributesQuery(
+    form.categoryId,
+    { skip: !form.categoryId || !dialogMode },
+  );
 
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
@@ -303,6 +316,7 @@ export default function AdminProductsPage() {
     setSpecDrafts({});
     setNewSpecRows([]);
     setSavingSpecId(null);
+    setCategoryChangedWarning(false);
     setForm(emptyForm);
     setSlugTouched(false);
     setFormError(null);
@@ -373,9 +387,11 @@ export default function AdminProductsPage() {
       status: product.status || "ACTIVE",
       images: [],
       specs: [],
+      attributeValues: selectionsFromAttributeValues(product.attributeValues),
     });
     setSlugTouched(true);
     setFormError(null);
+    setCategoryChangedWarning(false);
   }
 
   async function openEdit(product: Product) {
@@ -404,6 +420,7 @@ export default function AdminProductsPage() {
     setSpecDrafts({});
     setNewSpecRows([]);
     setSavingSpecId(null);
+    setCategoryChangedWarning(false);
     setForm(emptyForm);
     setSlugTouched(false);
     setFormError(null);
@@ -417,6 +434,25 @@ export default function AdminProductsPage() {
   async function refreshProductSpecs(productId: string) {
     const result = await fetchProductSpecs(productId).unwrap();
     syncSpecState(result.data ?? []);
+  }
+
+  function handleCategoryChange(nextCategoryId: string) {
+    setForm((prev) => {
+      const hadValues = Object.values(prev.attributeValues).some(
+        (ids) => ids.length > 0,
+      );
+      if (prev.categoryId && nextCategoryId !== prev.categoryId && hadValues) {
+        setCategoryChangedWarning(true);
+      } else if (nextCategoryId === prev.categoryId) {
+        setCategoryChangedWarning(false);
+      }
+      return {
+        ...prev,
+        categoryId: nextCategoryId,
+        attributeValues:
+          nextCategoryId === prev.categoryId ? prev.attributeValues : {},
+      };
+    });
   }
 
   function handleNameChange(name: string) {
@@ -478,6 +514,15 @@ export default function AdminProductsPage() {
       return `You can upload at most ${MAX_UPLOAD_FILES} images at a time.`;
     }
 
+    const requiredAttributes = (categoryAttributesData?.data ?? []).filter(
+      (attribute) => attribute.isRequired,
+    );
+    for (const attribute of requiredAttributes) {
+      if ((form.attributeValues[attribute.id] ?? []).length === 0) {
+        return `${attribute.name} is required.`;
+      }
+    }
+
     if (dialogMode === "create") {
       for (const [index, spec] of form.specs.entries()) {
         const hasName = spec.name.trim().length > 0;
@@ -508,6 +553,7 @@ export default function AdminProductsPage() {
     const costPrice = parseOptionalNumber(form.costPrice);
     const stock = Number(form.stock);
     const lowStock = Number(form.lowStock);
+    const attributeValues = toAttributeWritePayload(form.attributeValues);
 
     try {
       if (dialogMode === "create") {
@@ -526,6 +572,7 @@ export default function AdminProductsPage() {
           lowStock,
           isFeatured: form.isFeatured,
           status: form.status,
+          attributeValues,
         }).unwrap();
 
         const productId = result.data.id;
@@ -582,6 +629,7 @@ export default function AdminProductsPage() {
           lowStock,
           isFeatured: form.isFeatured,
           status: form.status,
+          attributeValues,
         }).unwrap();
 
         if (form.images.length > 0) {
@@ -1269,12 +1317,7 @@ export default function AdminProductsPage() {
                   <select
                     required
                     value={form.categoryId}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        categoryId: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => handleCategoryChange(e.target.value)}
                     className="w-full rounded-xl border-2 border-brand-900/10 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-600"
                   >
                     <option value="">Select category</option>
@@ -1585,6 +1628,25 @@ export default function AdminProductsPage() {
                     ))}
                   </div>
                 ) : null}
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Shop filters
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    Driven by the selected category
+                  </span>
+                </div>
+                <ProductFilterFields
+                  categoryId={form.categoryId}
+                  values={form.attributeValues}
+                  categoryChangedWarning={categoryChangedWarning}
+                  onChange={(attributeValues) =>
+                    setForm((prev) => ({ ...prev, attributeValues }))
+                  }
+                />
               </div>
 
               <div>

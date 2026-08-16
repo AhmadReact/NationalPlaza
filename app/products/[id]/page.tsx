@@ -119,7 +119,7 @@ export default async function ProductPage({ params }: PageProps) {
             </Link>
             <Crumb />
             <Link
-              href={`/#${categoryId}`}
+              href={categoryId ? `/categories/${categoryId}` : "/categories"}
               className="font-medium transition-colors hover:text-brand-700"
             >
               {categoryName}

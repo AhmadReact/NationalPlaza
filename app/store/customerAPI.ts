@@ -1,6 +1,15 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
+import {
+  toCatalogQueryString,
+  type CatalogApiParams,
+} from "@/lib/catalog-query";
 import { baseQueryWithInterceptor } from "@/lib/store/baseQuery";
 import type { ArtKind, Product as CardProduct } from "@/lib/data";
+import type {
+  Category,
+  CategoryFiltersData,
+  CategoryTreeNode,
+} from "@/app/admin/(panel)/categories/store/categoryAPI";
 
 export type StoreProductRef = {
   id: string;
@@ -41,14 +50,7 @@ export type StoreProduct = {
   specifications?: StoreProductSpecification[];
 };
 
-export type StoreProductListParams = {
-  page?: number;
-  limit?: number;
-  search?: string;
-  brandId?: string;
-  categoryId?: string;
-  isFeatured?: boolean;
-};
+export type StoreProductListParams = CatalogApiParams;
 
 export type PaginationMeta = {
   page: number;
@@ -77,41 +79,44 @@ export type ApiMutationResponse<T> = {
 
 const CATEGORY_ART: Record<string, ArtKind> = {
   "air-conditioners": "ac",
+  "air-conditioner": "ac",
   ac: "ac",
   refrigerators: "fridge",
+  refrigerator: "fridge",
   fridge: "fridge",
   "air-coolers": "cooler",
   cooler: "cooler",
   "led-tvs": "tv",
+  "led-tv": "tv",
   tv: "tv",
   "washing-machines": "washing",
+  "washing-machine": "washing",
   "deep-freezers": "freezer",
+  "deep-freezer": "freezer",
   "water-dispensers": "dispenser",
+  "water-dispenser": "dispenser",
   "air-fryers": "airfryer",
   "kitchen-hobs": "hob",
   "kitchen-hoods": "hood",
   "built-in-ovens": "oven",
   "kitchen-appliances": "microwave",
+  "microwave-oven": "microwave",
 };
 
 const CATEGORY_TINT: Record<string, string> = {
   "air-conditioners": "from-sky-100 via-cyan-50 to-white",
+  "air-conditioner": "from-sky-100 via-cyan-50 to-white",
   refrigerators: "from-emerald-100 via-teal-50 to-white",
+  refrigerator: "from-emerald-100 via-teal-50 to-white",
   "air-coolers": "from-cyan-100 via-sky-50 to-white",
   "led-tvs": "from-violet-100 via-purple-50 to-white",
+  "led-tv": "from-violet-100 via-purple-50 to-white",
   "washing-machines": "from-blue-100 via-indigo-50 to-white",
+  "washing-machine": "from-blue-100 via-indigo-50 to-white",
 };
 
 function toQueryString(params: StoreProductListParams & { status?: string }): string {
-  const searchParams = new URLSearchParams();
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === "") return;
-    searchParams.set(key, String(value));
-  });
-
-  const query = searchParams.toString();
-  return query ? `?${query}` : "";
+  return toCatalogQueryString(params);
 }
 
 function resolveArt(categorySlug: string): ArtKind {
@@ -182,6 +187,10 @@ export function toCardProduct(product: StoreProduct): CardProduct {
   };
 }
 
+export function getArtKindForSlug(slug: string): ArtKind {
+  return resolveArt(slug);
+}
+
 export function getStoreProductArt(product: StoreProduct): ArtKind {
   return resolveArt(product.category?.slug ?? "");
 }
@@ -235,6 +244,28 @@ export async function fetchStoreProduct(
   return fetchStoreProductById(param);
 }
 
+export async function fetchStoreCategoryBySlug(
+  slug: string,
+): Promise<Category | null> {
+  const json = await fetchJson<ApiMutationResponse<Category>>(
+    `/categories/slug/${encodeURIComponent(slug)}`,
+  );
+  return json?.data ?? null;
+}
+
+export async function fetchStoreCategoryTree(): Promise<CategoryTreeNode[]> {
+  const json = await fetchJson<ApiMutationResponse<CategoryTreeNode[]>>(
+    "/categories/tree",
+  );
+  return json?.data ?? [];
+}
+
+export function resolveCategoryFiltersId(
+  data: CategoryFiltersData | null | undefined,
+): string | undefined {
+  return data?.category?.id ?? data?.id;
+}
+
 export async function fetchRelatedStoreProducts(
   categoryId: string,
   excludeId: string,
@@ -259,7 +290,7 @@ export async function fetchRelatedStoreProducts(
 export const customerApi = createApi({
   reducerPath: "customerApi",
   baseQuery: baseQueryWithInterceptor,
-  tagTypes: ["StoreProduct"],
+  tagTypes: ["StoreProduct", "StoreCategory"],
   endpoints: (builder) => ({
     getStoreProducts: builder.query<
       ApiListResponse<StoreProduct>,
@@ -272,8 +303,12 @@ export const customerApi = createApi({
           search: params?.search,
           brandId: params?.brandId,
           categoryId: params?.categoryId,
+          minPrice: params?.minPrice,
+          maxPrice: params?.maxPrice,
+          inStock: params?.inStock,
+          attrs: params?.attrs,
           isFeatured: params?.isFeatured,
-          status: "ACTIVE",
+          status: params?.status ?? "ACTIVE",
         })}`,
         method: "GET",
       }),
@@ -314,6 +349,65 @@ export const customerApi = createApi({
           ? [{ type: "StoreProduct", id: result.data.id }]
           : [{ type: "StoreProduct", id: "LIST" }],
     }),
+    getStoreCategoryBySlug: builder.query<ApiMutationResponse<Category>, string>(
+      {
+        query: (slug) => ({
+          url: `/categories/slug/${encodeURIComponent(slug)}`,
+          method: "GET",
+        }),
+        extraOptions: { skipErrorToast: true },
+        providesTags: (result) =>
+          result?.data?.id
+            ? [{ type: "StoreCategory", id: result.data.id }]
+            : [{ type: "StoreCategory", id: "LIST" }],
+      },
+    ),
+    getStoreCategoryTree: builder.query<
+      ApiMutationResponse<CategoryTreeNode[]>,
+      void
+    >({
+      query: () => ({
+        url: "/categories/tree",
+        method: "GET",
+      }),
+      extraOptions: { skipErrorToast: true },
+      providesTags: [{ type: "StoreCategory", id: "TREE" }],
+    }),
+    getStoreCategoryFilters: builder.query<
+      ApiMutationResponse<CategoryFiltersData>,
+      CatalogApiParams & { slug: string }
+    >({
+      query: ({ slug, ...params }) => ({
+        url: `/categories/slug/${encodeURIComponent(slug)}/filters${toCatalogQueryString(
+          params,
+        )}`,
+        method: "GET",
+      }),
+      extraOptions: { skipErrorToast: true },
+      transformResponse: (
+        response: ApiMutationResponse<CategoryFiltersData | undefined>,
+      ): ApiMutationResponse<CategoryFiltersData> => {
+        const data = response.data;
+        const filters = data && Array.isArray(data.filters) ? data.filters : [];
+        return {
+          ...response,
+          data: {
+            id: data?.id,
+            name: data?.name,
+            slug: data?.slug,
+            category: data?.category,
+            filters,
+            price: data?.price,
+          },
+        };
+      },
+      providesTags: (result) => [
+        {
+          type: "StoreCategory",
+          id: result?.data?.category?.id ?? result?.data?.id ?? "FILTERS",
+        },
+      ],
+    }),
   }),
 });
 
@@ -324,4 +418,8 @@ export const {
   useLazyGetStoreProductByIdQuery,
   useGetStoreProductBySlugQuery,
   useLazyGetStoreProductBySlugQuery,
+  useGetStoreCategoryBySlugQuery,
+  useLazyGetStoreCategoryBySlugQuery,
+  useGetStoreCategoryTreeQuery,
+  useGetStoreCategoryFiltersQuery,
 } = customerApi;

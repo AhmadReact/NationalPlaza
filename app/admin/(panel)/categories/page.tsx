@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AdminPageHeader,
   AdminPanel,
@@ -249,6 +250,12 @@ function CategoryTreeRows({
                 >
                   Add child
                 </button>
+                <Link
+                  href={`/admin/categories/${node.id}/filters`}
+                  className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-brand-950 hover:bg-brand-50"
+                >
+                  Filters
+                </Link>
                 <button
                   type="button"
                   onClick={() => onEdit(node, parentId)}
