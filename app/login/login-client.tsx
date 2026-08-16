@@ -18,6 +18,7 @@ export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
+  const fromOrder = next.startsWith("/orders/");
   const status = useAppSelector((s) => s.customerAuth.status);
   const error = useAppSelector((s) => s.customerAuth.error);
 
@@ -43,7 +44,9 @@ export default function LoginClient() {
             Sign in
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Sign in to checkout. Guest cart items merge automatically.
+            {fromOrder
+              ? "Sign in to view this order. Guest confirmation emails do not need an account."
+              : "Sign in to checkout. Guest cart items merge automatically."}
           </p>
 
           <form
@@ -93,15 +96,27 @@ export default function LoginClient() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
-            New here?{" "}
-            <Link
-              href={`/register?next=${encodeURIComponent(next)}`}
-              className="font-semibold text-brand-700 hover:underline"
-            >
-              Create an account
-            </Link>
-          </p>
+          {fromOrder ? (
+            <p className="mt-6 text-center text-sm text-slate-500">
+              Ordered as a guest?{" "}
+              <Link
+                href="/track-order"
+                className="font-semibold text-brand-700 hover:underline"
+              >
+                Track with order number and email
+              </Link>
+            </p>
+          ) : (
+            <p className="mt-6 text-center text-sm text-slate-500">
+              New here?{" "}
+              <Link
+                href={`/register?next=${encodeURIComponent(next)}`}
+                className="font-semibold text-brand-700 hover:underline"
+              >
+                Create an account
+              </Link>
+            </p>
+          )}
         </div>
       </main>
       <Footer />

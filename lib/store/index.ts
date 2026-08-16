@@ -17,6 +17,7 @@ import { categoryApi } from "@/app/admin/(panel)/categories/store/categoryAPI";
 import { orderApi } from "@/app/admin/(panel)/orders/store/orderAPI";
 import { roleApi } from "@/app/admin/(panel)/roles/store/roleAPI";
 import { userApi } from "@/app/admin/(panel)/users/store/userAPI";
+import { emailApi } from "@/app/admin/(panel)/email/store/emailAPI";
 import { whatsappApi } from "@/app/admin/(panel)/whatsapp/store/whatsappAPI";
 import { productApi } from "@/app/admin/(panel)/products/store/productAPI";
 import { dashboardApi } from "@/app/admin/(panel)/store/dashboardAPI";
@@ -58,6 +59,7 @@ const rootReducer = combineReducers({
   [categoryApi.reducerPath]: categoryApi.reducer,
   [orderApi.reducerPath]: orderApi.reducer,
   [whatsappApi.reducerPath]: whatsappApi.reducer,
+  [emailApi.reducerPath]: emailApi.reducer,
   [productApi.reducerPath]: productApi.reducer,
   [dashboardApi.reducerPath]: dashboardApi.reducer,
   [customerApi.reducerPath]: customerApi.reducer,
@@ -89,6 +91,7 @@ export const makeStore = () => {
         categoryApi.middleware,
         orderApi.middleware,
         whatsappApi.middleware,
+        emailApi.middleware,
         productApi.middleware,
         dashboardApi.middleware,
         customerApi.middleware,

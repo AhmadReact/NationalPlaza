@@ -74,10 +74,14 @@ export const baseQueryWithInterceptor: BaseQueryFn<
   const url = resolveUrl(args);
   const isCustomerRoute =
     url.includes("/customer/") || url.startsWith("customer/");
+  const isGuestOrderRoute =
+    url.includes("/guest/orders") || url.startsWith("guest/orders");
 
-  const token = isCustomerRoute
-    ? state.customerAuth?.accessToken
-    : state.auth?.accessToken;
+  const token = isGuestOrderRoute
+    ? null
+    : isCustomerRoute
+      ? state.customerAuth?.accessToken
+      : state.auth?.accessToken;
 
   const result = await rawBaseQuery(
     withAuthHeader(args, token),

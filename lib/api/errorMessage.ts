@@ -52,6 +52,15 @@ export function extractApiErrorMessage(
   return fallback;
 }
 
+export function isNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    (error as { status?: unknown }).status === 404
+  );
+}
+
 export function getFetchErrorMessage(
   error: { status?: number | string; data?: unknown; error?: string } | undefined,
   fallback = "Request failed.",

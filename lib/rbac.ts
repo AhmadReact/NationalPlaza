@@ -40,7 +40,7 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   COUPONS: "Coupons",
   REVIEWS: "Review moderation",
   INVENTORY: "Inventory & warehouses",
-  NOTIFICATIONS: "Notifications & WhatsApp",
+  NOTIFICATIONS: "Notifications, WhatsApp & email",
 };
 
 export const PERMISSION_SHORT_LABEL: Record<Permission, string> = {

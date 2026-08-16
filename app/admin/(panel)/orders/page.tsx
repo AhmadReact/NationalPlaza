@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   AdminPageHeader,
   AdminPanel,
@@ -19,7 +20,10 @@ import {
   type OrderStatus,
 } from "@/app/admin/(panel)/orders/store/orderAPI";
 import { formatPrice } from "@/lib/data";
-import { canAccessWhatsAppAdmin } from "@/lib/admin-auth";
+import {
+  canAccessEmailAdmin,
+  canAccessWhatsAppAdmin,
+} from "@/lib/admin-auth";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { toast } from "@/lib/store/snackbarSlice";
 import { OrderTrackingDetails } from "@/components/order-tracking";
@@ -103,10 +107,23 @@ function isHttpsUrl(value: string): boolean {
 }
 
 export default function AdminOrdersPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-slate-500">Loading orders…</p>}
+    >
+      <AdminOrdersPageInner />
+    </Suspense>
+  );
+}
+
+function AdminOrdersPageInner() {
   const dispatch = useAppDispatch();
+  const searchParams = useSearchParams();
+  const orderIdFromUrl = searchParams.get("orderId")?.trim() || "";
   const accessToken = useAppSelector((state) => state.auth.accessToken);
   const authUser = useAppSelector((state) => state.auth.user);
   const canViewWhatsApp = canAccessWhatsAppAdmin(authUser);
+  const canViewEmail = canAccessEmailAdmin(authUser);
 
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
@@ -114,7 +131,9 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "">("");
   const limit = 20;
 
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(
+    orderIdFromUrl || null,
+  );
   const [statusDraft, setStatusDraft] = useState<OrderStatus | "">("");
   const [confirmStatus, setConfirmStatus] = useState<OrderStatus | null>(null);
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
@@ -152,6 +171,10 @@ export default function AdminOrdersPage() {
   const meta = data?.meta;
   const order = detailData?.data ?? null;
   const statusMap = statusesData?.data ?? [];
+
+  useEffect(() => {
+    if (orderIdFromUrl) setSelectedOrderId(orderIdFromUrl);
+  }, [orderIdFromUrl]);
 
   useEffect(() => {
     const next = detailData?.data;
@@ -239,13 +262,17 @@ export default function AdminOrdersPage() {
           toast.success(
             order.status === "SHIPPED"
               ? "Tracking details saved."
-              : "Order marked Shipped. WhatsApp notification will be sent to the customer if a valid number is on file.",
+              : "Order marked Shipped. Email and WhatsApp notifications will be sent if the customer has a valid address / number.",
           ),
+        );
+      } else if (order.status === nextStatus) {
+        dispatch(
+          toast.success(result.message || `Order already ${nextStatus}.`),
         );
       } else {
         dispatch(
           toast.success(
-            result.message || `Order status updated to ${nextStatus}`,
+            `Order marked ${nextStatus}. Email and WhatsApp notifications will be sent if the customer has a valid address / number.`,
           ),
         );
       }
@@ -640,6 +667,14 @@ export default function AdminOrdersPage() {
                           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-brand-950 hover:bg-brand-50"
                         >
                           WhatsApp log
+                        </Link>
+                      ) : null}
+                      {canViewEmail ? (
+                        <Link
+                          href={`/admin/email?orderId=${encodeURIComponent(order.id)}`}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-brand-950 hover:bg-brand-50"
+                        >
+                          Email log
                         </Link>
                       ) : null}
                     </div>

@@ -229,7 +229,27 @@ export const checkoutApi = createApi({
         url: `/customer/orders/${encodeURIComponent(id)}`,
         method: "GET",
       }),
+      extraOptions: { skipErrorToast: true },
       providesTags: (_r, _e, id) => [{ type: "Order", id }],
+    }),
+    getGuestOrderById: builder.query<ApiResponse<PlaceOrderResult>, string>({
+      query: (id) => ({
+        url: `/guest/orders/${encodeURIComponent(id)}`,
+        method: "GET",
+      }),
+      extraOptions: { skipErrorToast: true, skipAuthLogout: true },
+      providesTags: (_r, _e, id) => [{ type: "Order", id }],
+    }),
+    lookupGuestOrder: builder.mutation<
+      ApiResponse<PlaceOrderResult>,
+      { orderNumber: string; email: string }
+    >({
+      query: (body) => ({
+        url: "/guest/orders/lookup",
+        method: "POST",
+        body,
+      }),
+      extraOptions: { skipErrorToast: true, skipAuthLogout: true },
     }),
   }),
 });
@@ -245,4 +265,6 @@ export const {
   usePlaceGuestOrderMutation,
   useGetOrderByIdQuery,
   useLazyGetOrderByIdQuery,
+  useGetGuestOrderByIdQuery,
+  useLookupGuestOrderMutation,
 } = checkoutApi;

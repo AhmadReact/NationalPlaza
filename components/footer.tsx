@@ -1,23 +1,36 @@
+import Link from "next/link";
+
 const columns = [
   {
     heading: "Popular Categories",
     links: [
-      "Air Conditioners",
-      "Refrigerators",
-      "Air Coolers",
-      "LED TVs",
-      "Washing Machines",
-      "Deep Freezers",
-      "Kitchen Appliances",
+      { label: "Air Conditioners", href: "/#air-conditioners" },
+      { label: "Refrigerators", href: "/#refrigerators" },
+      { label: "Air Coolers", href: "/#air-coolers" },
+      { label: "LED TVs", href: "/#led-tvs" },
+      { label: "Washing Machines", href: "/#categories" },
+      { label: "Deep Freezers", href: "/#categories" },
+      { label: "Kitchen Appliances", href: "/#categories" },
     ],
   },
   {
     heading: "Policy",
-    links: ["Privacy Policy", "Terms & Conditions", "Return & Refund", "Warranty Policy"],
+    links: [
+      { label: "Privacy Policy", href: "/policies/privacy-policy" },
+      { label: "Terms & Conditions", href: "/policies/terms-of-service" },
+      { label: "Return & Refund", href: "/policies/refund-policy" },
+    ],
   },
   {
     heading: "Customer Support",
-    links: ["Contact Us", "FAQs", "Customer Feedback", "Reviews", "Corporate Solutions"],
+    links: [
+      { label: "Contact Us", href: "#" },
+      { label: "Track Order", href: "/track-order" },
+      { label: "FAQs", href: "#" },
+      { label: "Customer Feedback", href: "#" },
+      { label: "Reviews", href: "/#reviews" },
+      { label: "Corporate Solutions", href: "#" },
+    ],
   },
 ];
 
@@ -104,13 +117,13 @@ export function Footer() {
             </h3>
             <ul className="mt-4 space-y-2.5">
               {column.links.map((link) => (
-                <li key={link}>
-                  <a
-                    href="#"
+                <li key={link.label}>
+                  <Link
+                    href={link.href}
                     className="text-sm text-white/60 hover:text-gold-300 transition-colors"
                   >
-                    {link}
-                  </a>
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>

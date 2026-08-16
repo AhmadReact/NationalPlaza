@@ -1,16 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
+  useGetGuestOrderByIdQuery,
   useGetOrderByIdQuery,
-  type PlaceOrderResult,
 } from "@/app/store/checkoutAPI";
-import { selectCustomerAccessToken } from "@/app/store/customerAuthSlice";
+import {
+  selectCustomerAccessToken,
+  selectCustomerUser,
+} from "@/app/store/customerAuthSlice";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { getFetchErrorMessage, isNotFoundError } from "@/lib/api/errorMessage";
 import { formatPrice } from "@/lib/data";
+import { maskEmail, resolveOrderNotifyEmail } from "@/lib/email";
 import { readLastPlacedOrder } from "@/lib/order/lastOrder";
 import { maskPhone, resolveOrderNotifyPhone } from "@/lib/phone";
 import { toast } from "@/lib/store/snackbarSlice";
@@ -24,21 +29,54 @@ export default function OrderClient({ id }: { id: string }) {
   const searchParams = useSearchParams();
   const placed = searchParams.get("placed") === "1";
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const accessToken = useAppSelector(selectCustomerAccessToken);
+  const customerUser = useAppSelector(selectCustomerUser);
 
   const cachedOrder = useMemo(() => readLastPlacedOrder(id), [id]);
-  const [guestOrder] = useState<PlaceOrderResult | null>(cachedOrder);
 
-  const { data, isLoading, isError, error } = useGetOrderByIdQuery(id, {
+  const {
+    data: customerData,
+    isLoading: customerLoading,
+    isError: customerIsError,
+    error: customerError,
+  } = useGetOrderByIdQuery(id, {
     skip: !accessToken,
   });
 
-  const order = data?.data ?? guestOrder;
+  const customerNotFound =
+    Boolean(accessToken) && customerIsError && isNotFoundError(customerError);
+  const skipGuest = Boolean(accessToken) && !customerNotFound;
+
+  const {
+    data: guestData,
+    isLoading: guestLoading,
+    isError: guestIsError,
+    isUninitialized: guestUninitialized,
+    error: guestError,
+  } = useGetGuestOrderByIdQuery(id, {
+    skip: skipGuest,
+  });
+
+  const order = customerData?.data ?? guestData?.data ?? cachedOrder;
+  const canDownloadInvoice = Boolean(accessToken && customerData?.data);
   const notifyPhone = resolveOrderNotifyPhone(order);
   const maskedNotifyPhone = notifyPhone ? maskPhone(notifyPhone) : null;
+  const notifyEmail = resolveOrderNotifyEmail(order, customerUser?.email);
+  const maskedNotifyEmail = notifyEmail ? maskEmail(notifyEmail) : null;
+
+  const guestNotFound =
+    !skipGuest && guestIsError && isNotFoundError(guestError);
+  const redirectingToLogin =
+    !accessToken && guestNotFound && !cachedOrder;
+
+  useEffect(() => {
+    if (!redirectingToLogin) return;
+    router.replace(`/login?next=${encodeURIComponent(`/orders/${id}`)}`);
+  }, [id, redirectingToLogin, router]);
 
   const downloadInvoice = async () => {
-    if (!accessToken || !order) return;
+    if (!canDownloadInvoice || !accessToken || !order) return;
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/customer/orders/${encodeURIComponent(order.id)}/invoice`,
@@ -64,9 +102,21 @@ export default function OrderClient({ id }: { id: string }) {
     }
   };
 
-  const showLoading = Boolean(accessToken) && isLoading && !order;
+  const fetching =
+    (Boolean(accessToken) && customerLoading) ||
+    (!skipGuest && (guestLoading || guestUninitialized));
+  const showLoading = !order && (fetching || redirectingToLogin);
   const showMissing =
-    !order && (!accessToken || isError || (!isLoading && !data));
+    !order &&
+    !fetching &&
+    !redirectingToLogin &&
+    (customerIsError || guestIsError);
+  const missingMessage = getFetchErrorMessage(
+    (customerError ?? guestError) as
+      | { status?: number | string; data?: unknown; error?: string }
+      | undefined,
+    "Order not found.",
+  );
 
   return (
     <>
@@ -77,16 +127,21 @@ export default function OrderClient({ id }: { id: string }) {
             <p className="text-center text-sm text-slate-500">Loading order…</p>
           ) : showMissing ? (
             <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-              <p className="text-slate-600">
-                {(error as { data?: { message?: string } })?.data?.message ||
-                  "Order not found."}
-              </p>
-              <Link
-                href="/"
-                className="mt-4 inline-flex rounded-full bg-brand-900 px-5 py-2.5 text-sm font-bold text-white"
-              >
-                Back to shop
-              </Link>
+              <p className="text-slate-600">{missingMessage}</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <Link
+                  href="/track-order"
+                  className="inline-flex rounded-full bg-brand-900 px-5 py-2.5 text-sm font-bold text-white"
+                >
+                  Track with order number
+                </Link>
+                <Link
+                  href="/"
+                  className="inline-flex rounded-full border-2 border-brand-900/15 px-5 py-2.5 text-sm font-semibold text-brand-900"
+                >
+                  Back to shop
+                </Link>
+              </div>
             </div>
           ) : order ? (
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -95,6 +150,25 @@ export default function OrderClient({ id }: { id: string }) {
                   Thank you — your order was placed successfully.
                 </p>
               )}
+              {placed && !accessToken ? (
+                <p className="mb-4 rounded-2xl border border-gold-200 bg-gold-50 px-4 py-3 text-center text-sm text-brand-950">
+                  Save this order number:{" "}
+                  <span className="font-extrabold">{order.orderNumber}</span>
+                  . You can look it up later with this number and your checkout
+                  email.{" "}
+                  <Link
+                    href="/track-order"
+                    className="font-semibold underline decoration-brand-700/40 underline-offset-2 hover:text-brand-700"
+                  >
+                    Track order
+                  </Link>
+                </p>
+              ) : null}
+              {placed && maskedNotifyEmail ? (
+                <p className="mb-4 rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-center text-sm text-brand-900">
+                  We’ll email order updates to {maskedNotifyEmail}.
+                </p>
+              ) : null}
               {placed && maskedNotifyPhone ? (
                 <p className="mb-4 rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-center text-sm text-brand-900">
                   We’ll send order updates to WhatsApp at {maskedNotifyPhone}.
@@ -119,12 +193,12 @@ export default function OrderClient({ id }: { id: string }) {
                   </>
                 )}
               </p>
-              {order.guestEmail && (
+              {order.guestEmail && !placed ? (
                 <p className="mt-1 text-sm text-slate-500">
-                  Confirmation sent to {order.guestEmail}
+                  {order.guestEmail}
                   {order.guestPhone ? ` · ${order.guestPhone}` : ""}
                 </p>
-              )}
+              ) : null}
 
               <ul className="mt-8 space-y-3 border-b border-slate-100 pb-6">
                 {order.items.map((item) => (
@@ -212,7 +286,7 @@ export default function OrderClient({ id }: { id: string }) {
               />
 
               <div className="mt-8 flex flex-wrap gap-3">
-                {accessToken && (
+                {canDownloadInvoice && (
                   <button
                     type="button"
                     onClick={() => void downloadInvoice()}
@@ -227,6 +301,14 @@ export default function OrderClient({ id }: { id: string }) {
                 >
                   Continue shopping
                 </Link>
+                {!canDownloadInvoice ? (
+                  <Link
+                    href="/track-order"
+                    className="rounded-full border-2 border-brand-900/15 px-5 py-2.5 text-sm font-semibold text-brand-900 hover:border-brand-700"
+                  >
+                    Track another order
+                  </Link>
+                ) : null}
               </div>
             </div>
           ) : null}

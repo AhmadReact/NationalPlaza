@@ -26,11 +26,23 @@ export function hasAdminPermission(
   );
 }
 
-/** Gate WhatsApp / notifications UI on effective permissions, not role slugs. */
-export function canAccessWhatsAppAdmin(
+/** Gate WhatsApp / email / notifications UI on effective permissions, not role slugs. */
+export function canAccessNotificationsAdmin(
   user: AdminAuthUserLike | null | undefined,
 ): boolean {
   return can(asAuthUser(user), "NOTIFICATIONS");
+}
+
+export function canAccessWhatsAppAdmin(
+  user: AdminAuthUserLike | null | undefined,
+): boolean {
+  return canAccessNotificationsAdmin(user);
+}
+
+export function canAccessEmailAdmin(
+  user: AdminAuthUserLike | null | undefined,
+): boolean {
+  return canAccessNotificationsAdmin(user);
 }
 
 export function canAccessAdminModule(

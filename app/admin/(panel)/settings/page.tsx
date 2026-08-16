@@ -3,6 +3,7 @@ import {
   AdminPanel,
   AdminPrimaryButton,
 } from "@/components/admin/ui";
+import { EmailSettingsCard } from "@/components/admin/email-settings-card";
 import { WhatsAppSettingsCard } from "@/components/admin/whatsapp-settings-card";
 
 const fields = [
@@ -42,6 +43,7 @@ export default function AdminSettingsPage() {
       </AdminPanel>
       <div className="mt-5">
         <WhatsAppSettingsCard />
+        <EmailSettingsCard />
       </div>
     </>
   );

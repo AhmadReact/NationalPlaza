@@ -15,6 +15,7 @@ export type AdminIconName =
   | "shipping"
   | "reports"
   | "whatsapp"
+  | "email"
   | "settings";
 
 export type AdminNavItem = {
@@ -87,6 +88,12 @@ export const adminNavGroups: AdminNavGroup[] = [
         icon: "whatsapp",
         permission: "NOTIFICATIONS",
       },
+      {
+        label: "Email",
+        href: "/admin/email",
+        icon: "email",
+        permission: "NOTIFICATIONS",
+      },
     ],
   },
   {
@@ -130,6 +137,7 @@ const PATH_PERMISSIONS: Array<[string, Permission | null]> = [
   ["/admin/coupons", "COUPONS"],
   ["/admin/reviews", "REVIEWS"],
   ["/admin/whatsapp", "NOTIFICATIONS"],
+  ["/admin/email", "NOTIFICATIONS"],
   ["/admin/reports", "REPORTS"],
   ["/admin/users", "USERS"],
   ["/admin/roles", "USERS"],

@@ -18,13 +18,17 @@ import {
 } from "@/app/store/checkoutAPI";
 import { clearCartState, selectCart } from "@/app/store/cartSlice";
 import { loadCart } from "@/app/store/cartThunk";
-import { selectCustomerIsAuthenticated } from "@/app/store/customerAuthSlice";
+import {
+  selectCustomerIsAuthenticated,
+  selectCustomerUser,
+} from "@/app/store/customerAuthSlice";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { clearGuestToken, getGuestToken } from "@/lib/cart/guestToken";
 import { saveLastPlacedOrder } from "@/lib/order/lastOrder";
 import { formatPrice } from "@/lib/data";
 import { getFetchErrorMessage } from "@/lib/api/errorMessage";
+import { CHECKOUT_EMAIL_HELPER, isValidEmail } from "@/lib/email";
 import {
   CHECKOUT_PHONE_HELPER,
   CHECKOUT_PHONE_LABEL,
@@ -66,6 +70,7 @@ export default function CheckoutPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const isAuthenticated = useAppSelector(selectCustomerIsAuthenticated);
+  const customerUser = useAppSelector(selectCustomerUser);
   const cart = useAppSelector(selectCart);
 
   const {
@@ -153,7 +158,7 @@ export default function CheckoutPage() {
   const canPreviewGuest = Boolean(
     !isAuthenticated &&
       getGuestToken() &&
-      guestEmail.trim() &&
+      isValidEmail(guestEmail) &&
       isValidCheckoutPhone(guestPhone) &&
       deliveryMethodId &&
       isGuestAddressReady(guestShipping),
@@ -342,6 +347,11 @@ export default function CheckoutPage() {
       const shippingPhone =
         guestShipping.phone?.trim() || guestPhone.trim() || "";
 
+      if (!isValidEmail(guestEmail)) {
+        dispatch(toast.error("Enter a valid email address."));
+        return;
+      }
+
       if (
         !guestToken ||
         !canPreviewGuest ||
@@ -458,6 +468,11 @@ export default function CheckoutPage() {
 
           <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
             <div className="space-y-6">
+              {isAuthenticated && customerUser?.email ? (
+                <p className="rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-sm text-brand-900">
+                  We’ll send your order confirmation to {customerUser.email}.
+                </p>
+              ) : null}
               {!isAuthenticated && (
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                   <h2 className="font-display text-lg font-extrabold text-brand-950">
@@ -471,10 +486,14 @@ export default function CheckoutPage() {
                       <input
                         type="email"
                         required
+                        autoComplete="email"
                         value={guestEmail}
                         onChange={(e) => setGuestEmail(e.target.value)}
                         className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
                       />
+                      <span className="mt-1 block text-xs text-slate-500">
+                        {CHECKOUT_EMAIL_HELPER}
+                      </span>
                     </label>
                     <label className="block sm:col-span-2">
                       <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
