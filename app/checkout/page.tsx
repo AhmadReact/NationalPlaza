@@ -11,10 +11,16 @@ import {
   usePlaceOrderMutation,
   usePreviewCheckoutMutation,
   usePreviewGuestCheckoutMutation,
+  useRequestCheckoutOtpMutation,
+  useRequestGuestCheckoutOtpMutation,
   useValidateCouponMutation,
+  type CheckoutInput,
+  type CheckoutOtpResult,
   type CheckoutPreview,
   type CreateAddressInput,
   type GuestCheckoutAddressInput,
+  type GuestCheckoutInput,
+  type PlaceOrderResult,
 } from "@/app/store/checkoutAPI";
 import { clearCartState, selectCart } from "@/app/store/cartSlice";
 import { loadCart } from "@/app/store/cartThunk";
@@ -22,6 +28,7 @@ import {
   selectCustomerIsAuthenticated,
   selectCustomerUser,
 } from "@/app/store/customerAuthSlice";
+import { CheckoutOtpModal } from "@/components/checkout-otp-modal";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { clearGuestToken, getGuestToken } from "@/lib/cart/guestToken";
@@ -66,6 +73,15 @@ function PhoneHint() {
   );
 }
 
+type FetchLikeError = { status?: number | string; data?: unknown };
+
+function asFetchError(error: unknown): FetchLikeError {
+  if (typeof error === "object" && error !== null) {
+    return error as FetchLikeError;
+  }
+  return {};
+}
+
 export default function CheckoutPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -83,9 +99,13 @@ export default function CheckoutPage() {
 
   const [previewCheckout, { isLoading: customerPreviewLoading }] =
     usePreviewCheckoutMutation();
+  const [requestCheckoutOtp, { isLoading: sendingCustomerOtp }] =
+    useRequestCheckoutOtpMutation();
   const [placeOrder, { isLoading: customerPlacing }] = usePlaceOrderMutation();
   const [previewGuestCheckout, { isLoading: guestPreviewLoading }] =
     usePreviewGuestCheckoutMutation();
+  const [requestGuestCheckoutOtp, { isLoading: sendingGuestOtp }] =
+    useRequestGuestCheckoutOtpMutation();
   const [placeGuestOrder, { isLoading: guestPlacing }] =
     usePlaceGuestOrderMutation();
   const [createAddress, { isLoading: creatingAddress }] =
@@ -119,7 +139,12 @@ export default function CheckoutPage() {
     isDefault: true,
   });
 
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSession, setOtpSession] = useState<CheckoutOtpResult | null>(null);
+
   const previewLoading = customerPreviewLoading || guestPreviewLoading;
+  const sendingOtp = sendingCustomerOtp || sendingGuestOtp;
   const placing = customerPlacing || guestPlacing;
 
   useEffect(() => {
@@ -314,6 +339,57 @@ export default function CheckoutPage() {
     }
   };
 
+  const buildCustomerCheckoutInput = (): CheckoutInput | null => {
+    if (!shippingAddressId || !deliveryMethodId) return null;
+    return {
+      shippingAddressId,
+      deliveryMethodId,
+      billingSameAsShipping: true,
+      couponCode: couponApplied || undefined,
+      notes: notes || undefined,
+    };
+  };
+
+  const buildGuestCheckoutInput = (): GuestCheckoutInput | null => {
+    const guestToken = getGuestToken();
+    if (!guestToken || !deliveryMethodId) return null;
+    const contactPhone = guestPhone.trim() || guestShipping.phone?.trim() || "";
+    const shippingPhone =
+      guestShipping.phone?.trim() || guestPhone.trim() || "";
+    return {
+      guestToken,
+      email: guestEmail.trim(),
+      phone: contactPhone || undefined,
+      shippingAddress: {
+        fullName: guestShipping.fullName.trim(),
+        line1: guestShipping.line1.trim(),
+        city: guestShipping.city.trim(),
+        postalCode: guestShipping.postalCode.trim(),
+        phone: shippingPhone || undefined,
+        line2: guestShipping.line2?.trim() || undefined,
+        state: guestShipping.state?.trim() || undefined,
+        country: guestShipping.country?.trim() || "PK",
+      },
+      billingSameAsShipping: true,
+      deliveryMethodId,
+      couponCode: couponApplied || undefined,
+      notes: notes || undefined,
+    };
+  };
+
+  const finishPlacedOrder = (result: PlaceOrderResult, isGuest: boolean) => {
+    saveLastPlacedOrder(result);
+    if (isGuest) clearGuestToken();
+    dispatch(clearCartState());
+    dispatch(
+      toast.success(`Order placed successfully — ${result.orderNumber}`),
+    );
+    setOtpOpen(false);
+    setOtpSession(null);
+    setOtpError(null);
+    router.replace(`/orders/${result.id}?placed=1`);
+  };
+
   const onPlaceOrder = async () => {
     if (!deliveryMethodId) return;
 
@@ -328,32 +404,26 @@ export default function CheckoutPage() {
           );
           return;
         }
-        const result = await placeOrder({
-          shippingAddressId,
-          deliveryMethodId,
-          billingSameAsShipping: true,
-          couponCode: couponApplied || undefined,
-          notes: notes || undefined,
-        }).unwrap();
-        saveLastPlacedOrder(result.data);
-        dispatch(clearCartState());
-        dispatch(toast.success("Order placed!"));
-        router.replace(`/orders/${result.data.id}?placed=1`);
+        const body = buildCustomerCheckoutInput();
+        if (!body) return;
+        const result = await requestCheckoutOtp(body).unwrap();
+        setOtpError(null);
+        setOtpSession(result.data);
+        setOtpOpen(true);
         return;
       }
-
-      const guestToken = getGuestToken();
-      const contactPhone = guestPhone.trim() || guestShipping.phone?.trim() || "";
-      const shippingPhone =
-        guestShipping.phone?.trim() || guestPhone.trim() || "";
 
       if (!isValidEmail(guestEmail)) {
         dispatch(toast.error("Enter a valid email address."));
         return;
       }
 
+      const body = buildGuestCheckoutInput();
+      const contactPhone = body?.phone ?? "";
+      const shippingPhone = body?.shippingAddress.phone ?? "";
+
       if (
-        !guestToken ||
+        !body ||
         !canPreviewGuest ||
         !isValidCheckoutPhone(contactPhone) ||
         !isValidCheckoutPhone(shippingPhone)
@@ -366,41 +436,80 @@ export default function CheckoutPage() {
         return;
       }
 
-      const result = await placeGuestOrder({
-        guestToken,
-        email: guestEmail.trim(),
-        phone: contactPhone,
-        shippingAddress: {
-          fullName: guestShipping.fullName.trim(),
-          line1: guestShipping.line1.trim(),
-          city: guestShipping.city.trim(),
-          postalCode: guestShipping.postalCode.trim(),
-          phone: shippingPhone,
-          line2: guestShipping.line2?.trim() || undefined,
-          state: guestShipping.state?.trim() || undefined,
-          country: guestShipping.country?.trim() || "PK",
-        },
-        billingSameAsShipping: true,
-        deliveryMethodId,
-        couponCode: couponApplied || undefined,
-        notes: notes || undefined,
-      }).unwrap();
-
-      saveLastPlacedOrder(result.data);
-      clearGuestToken();
-      dispatch(clearCartState());
-      dispatch(toast.success("Order placed!"));
-      router.replace(`/orders/${result.data.id}?placed=1`);
+      const result = await requestGuestCheckoutOtp(body).unwrap();
+      setOtpError(null);
+      setOtpSession(result.data);
+      setOtpOpen(true);
     } catch (error) {
-      dispatch(
-        toast.error(
-          getFetchErrorMessage(
-            error as { status?: number | string; data?: unknown },
-            "Failed to place order.",
-          ),
+      const message = getFetchErrorMessage(
+        asFetchError(error),
+        "Could not send the verification code.",
+      );
+      if (otpSession) {
+        setOtpError(message);
+        setOtpOpen(true);
+        return;
+      }
+      dispatch(toast.error(message));
+    }
+  };
+
+  const onVerifyOtp = async (otp: string) => {
+    try {
+      if (isAuthenticated) {
+        const body = buildCustomerCheckoutInput();
+        if (!body) return;
+        const result = await placeOrder({ ...body, otp }).unwrap();
+        finishPlacedOrder(result.data, false);
+        return;
+      }
+
+      const body = buildGuestCheckoutInput();
+      if (!body) return;
+      const result = await placeGuestOrder({ ...body, otp }).unwrap();
+      finishPlacedOrder(result.data, true);
+    } catch (error) {
+      setOtpError(
+        getFetchErrorMessage(
+          asFetchError(error),
+          "Could not verify the code.",
         ),
       );
     }
+  };
+
+  const onResendOtp = async (): Promise<CheckoutOtpResult | null> => {
+    try {
+      if (isAuthenticated) {
+        const body = buildCustomerCheckoutInput();
+        if (!body) return null;
+        const result = await requestCheckoutOtp(body).unwrap();
+        setOtpError(null);
+        setOtpSession(result.data);
+        return result.data;
+      }
+
+      const body = buildGuestCheckoutInput();
+      if (!body) return null;
+      const result = await requestGuestCheckoutOtp(body).unwrap();
+      setOtpError(null);
+      setOtpSession(result.data);
+      return result.data;
+    } catch (error) {
+      setOtpError(
+        getFetchErrorMessage(
+          asFetchError(error),
+          "Could not resend the code.",
+        ),
+      );
+      return null;
+    }
+  };
+
+  const closeOtpModal = () => {
+    if (placing) return;
+    setOtpOpen(false);
+    setOtpError(null);
   };
 
   const loadingGate = deliveryLoading || (isAuthenticated && addressesLoading);
@@ -855,13 +964,19 @@ export default function CheckoutPage() {
                 disabled={
                   !preview ||
                   placing ||
+                  sendingOtp ||
+                  otpOpen ||
                   !!previewError ||
                   (isAuthenticated && !selectedAddressPhoneOk)
                 }
                 onClick={() => void onPlaceOrder()}
                 className="mt-6 w-full rounded-full bg-gold-400 py-3 text-sm font-bold text-brand-950 shadow-lg shadow-gold-500/25 transition-all hover:bg-gold-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {placing ? "Placing order…" : "Place order"}
+                {sendingOtp && !otpOpen
+                  ? "Sending code…"
+                  : placing
+                    ? "Placing order…"
+                    : "Place order"}
               </button>
               {isAuthenticated &&
               shippingAddressId &&
@@ -880,6 +995,18 @@ export default function CheckoutPage() {
           </div>
         </div>
       </main>
+      <CheckoutOtpModal
+        open={otpOpen && Boolean(otpSession)}
+        phoneMasked={otpSession?.phoneMasked ?? ""}
+        expiresInSeconds={otpSession?.expiresInSeconds ?? 300}
+        resendAvailableInSeconds={otpSession?.resendAvailableInSeconds ?? 60}
+        verifying={placing}
+        error={otpError}
+        onClose={closeOtpModal}
+        onClearError={() => setOtpError(null)}
+        onVerify={onVerifyOtp}
+        onResend={onResendOtp}
+      />
       <Footer />
     </>
   );

@@ -91,6 +91,12 @@ export type PlaceOrderResult = CheckoutPreview & {
   updatedAt: string;
 };
 
+export type CheckoutOtpResult = {
+  phoneMasked: string;
+  expiresInSeconds: number;
+  resendAvailableInSeconds: number;
+};
+
 export type CheckoutInput = {
   shippingAddressId: string;
   deliveryMethodId: string;
@@ -98,6 +104,10 @@ export type CheckoutInput = {
   billingAddressId?: string;
   couponCode?: string;
   notes?: string;
+};
+
+export type PlaceOrderInput = CheckoutInput & {
+  otp: string;
 };
 
 export type GuestCheckoutAddressInput = {
@@ -121,6 +131,10 @@ export type GuestCheckoutInput = {
   billingAddress?: GuestCheckoutAddressInput;
   couponCode?: string;
   notes?: string;
+};
+
+export type PlaceGuestOrderInput = GuestCheckoutInput & {
+  otp: string;
 };
 
 export type CouponValidateInput = {
@@ -194,7 +208,21 @@ export const checkoutApi = createApi({
       }),
       extraOptions: { skipErrorToast: true },
     }),
-    placeOrder: builder.mutation<ApiResponse<PlaceOrderResult>, CheckoutInput>({
+    requestCheckoutOtp: builder.mutation<
+      ApiResponse<CheckoutOtpResult>,
+      CheckoutInput
+    >({
+      query: (body) => ({
+        url: "/customer/checkout/otp",
+        method: "POST",
+        body,
+      }),
+      extraOptions: { skipErrorToast: true },
+    }),
+    placeOrder: builder.mutation<
+      ApiResponse<PlaceOrderResult>,
+      PlaceOrderInput
+    >({
       query: (body) => ({
         url: "/customer/checkout",
         method: "POST",
@@ -213,9 +241,20 @@ export const checkoutApi = createApi({
       }),
       extraOptions: { skipErrorToast: true, skipAuthLogout: true },
     }),
+    requestGuestCheckoutOtp: builder.mutation<
+      ApiResponse<CheckoutOtpResult>,
+      GuestCheckoutInput
+    >({
+      query: (body) => ({
+        url: "/checkout/guest/otp",
+        method: "POST",
+        body,
+      }),
+      extraOptions: { skipErrorToast: true, skipAuthLogout: true },
+    }),
     placeGuestOrder: builder.mutation<
       ApiResponse<PlaceOrderResult>,
-      GuestCheckoutInput
+      PlaceGuestOrderInput
     >({
       query: (body) => ({
         url: "/checkout/guest",
@@ -260,8 +299,10 @@ export const {
   useGetDeliveryMethodsQuery,
   useValidateCouponMutation,
   usePreviewCheckoutMutation,
+  useRequestCheckoutOtpMutation,
   usePlaceOrderMutation,
   usePreviewGuestCheckoutMutation,
+  useRequestGuestCheckoutOtpMutation,
   usePlaceGuestOrderMutation,
   useGetOrderByIdQuery,
   useLazyGetOrderByIdQuery,
