@@ -115,6 +115,9 @@ export const baseQueryWithInterceptor: BaseQueryFn<
           }
         } else if (isCustomerRoute) {
           await dispatchCustomerLogout(api.dispatch);
+          if (path !== "/") {
+            window.location.assign("/");
+          }
         }
       } else if (isCustomerRoute) {
         await dispatchCustomerLogout(api.dispatch);

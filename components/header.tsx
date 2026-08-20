@@ -2,9 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { selectCartItemCount } from "@/app/store/cartSlice";
+import { clearCartState, selectCartItemCount } from "@/app/store/cartSlice";
+import { getCustomerDisplayName } from "@/app/store/customerAuthAPI";
+import {
+  customerLogout,
+  selectCustomerIsAuthenticated,
+  selectCustomerUser,
+} from "@/app/store/customerAuthSlice";
 import { useGetStoreCategoryTreeQuery } from "@/app/store/customerAPI";
-import { useAppSelector } from "@/lib/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 
 const fallbackNavLinks = [
   { label: "Air Conditioners", href: "/categories/air-conditioner" },
@@ -21,8 +27,18 @@ const staticLinks = [
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const dispatch = useAppDispatch();
   const cartCount = useAppSelector(selectCartItemCount);
+  const isAuthenticated = useAppSelector(selectCustomerIsAuthenticated);
+  const customerUser = useAppSelector(selectCustomerUser);
   const { data: treeData } = useGetStoreCategoryTreeQuery();
+
+  function handleLogout() {
+    setMenuOpen(false);
+    dispatch(customerLogout());
+    dispatch(clearCartState());
+    window.location.assign("/");
+  }
 
   const navLinks = useMemo(() => {
     const roots = (treeData?.data ?? [])
@@ -98,12 +114,27 @@ export function Header() {
           </div>
 
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
-            <Link
-              href="/login"
-              className="hidden rounded-full px-3 py-2 text-sm font-semibold text-brand-900 transition-colors hover:bg-brand-50 sm:inline"
-            >
-              Sign in
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <span className="hidden max-w-36 truncate px-2 text-sm font-semibold text-brand-900 sm:inline">
+                  {getCustomerDisplayName(customerUser)}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-full px-3 py-2 text-sm font-semibold text-brand-900 transition-colors hover:bg-brand-50"
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="hidden rounded-full px-3 py-2 text-sm font-semibold text-brand-900 transition-colors hover:bg-brand-50 sm:inline"
+              >
+                Sign in
+              </Link>
+            )}
             <IconButton label="Wishlist">
               <HeartIcon className="h-5 w-5" />
             </IconButton>
@@ -137,6 +168,25 @@ export function Header() {
                 </Link>
               </li>
             ))}
+            <li className="lg:hidden">
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="block w-full border-b-2 border-transparent px-4 py-3 text-left font-medium transition-colors hover:bg-brand-800 hover:text-gold-300"
+                >
+                  Log out
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="block border-b-2 border-transparent px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300"
+                >
+                  Sign in
+                </Link>
+              )}
+            </li>
             <li className="lg:ml-auto">
               <span className="hidden items-center gap-2 px-4 py-3 font-semibold text-gold-300 lg:flex">
                 <SparkIcon className="h-4 w-4" />
