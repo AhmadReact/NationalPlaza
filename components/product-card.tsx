@@ -16,7 +16,7 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-brand-900/10 hover:border-brand-200">
       <div
-        className={`relative grid h-48 place-items-center overflow-hidden bg-gradient-to-br ${product.tint}`}
+        className={`relative aspect-square overflow-hidden bg-gradient-to-br ${product.tint}`}
       >
         <Link href={href} aria-label={product.name} className="absolute inset-0" />
         {product.imageUrl ? (
@@ -24,7 +24,7 @@ export function ProductCard({ product }: { product: Product }) {
           <img
             src={product.imageUrl}
             alt={product.name}
-            className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-contain object-center p-6 sm:p-8"
           />
         ) : (
           <ApplianceArt
