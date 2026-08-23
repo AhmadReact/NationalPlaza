@@ -33,7 +33,7 @@ export type AuthUser = {
 };
 
 export const PERMISSION_LABEL: Record<Permission, string> = {
-  PRODUCTS: "Catalog (products, categories, brands)",
+  PRODUCTS: "Catalog (products, categories, brands, banners)",
   ORDERS: "Orders & delivery methods",
   USERS: "Users & roles",
   REPORTS: "Dashboard",

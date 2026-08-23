@@ -18,6 +18,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { ProductCard } from "@/components/product-card";
 import { ProductGallery } from "@/components/product-gallery";
+import { ProductBanners } from "@/components/storefront-banners";
 import { PurchaseActions } from "@/components/purchase-actions";
 
 type PageProps = {
@@ -241,6 +242,10 @@ export default async function ProductPage({ params }: PageProps) {
             </ul>
           </div>
         </section>
+
+        <div className="mx-auto max-w-7xl px-4">
+          <ProductBanners productId={product.id} />
+        </div>
 
         <div className="mx-auto max-w-7xl px-4 pb-4">
           <DetailTabs

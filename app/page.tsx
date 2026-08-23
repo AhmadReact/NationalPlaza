@@ -4,6 +4,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Heritage } from "@/components/heritage";
 import { HeroSlider } from "@/components/hero-slider";
+import { HomePromoBanners } from "@/components/storefront-banners";
 import { HomeProducts } from "@/components/home-products";
 import { Testimonials } from "@/components/testimonials";
 import { TrustStrip } from "@/components/trust-strip";
@@ -16,6 +17,7 @@ export default function Home() {
         <HeroSlider />
         <TrustStrip />
         <Categories />
+        <HomePromoBanners />
         <HomeProducts />
         <BrandsMarquee />
         <Heritage />

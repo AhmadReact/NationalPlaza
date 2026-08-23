@@ -11,6 +11,7 @@ import {
   useGetStoreProductsQuery,
 } from "@/app/store/customerAPI";
 import { CollectionFilters } from "@/components/collection-filters";
+import { CategoryBanners } from "@/components/storefront-banners";
 import { ProductCard } from "@/components/product-card";
 import { getFetchErrorMessage } from "@/lib/api/errorMessage";
 import {
@@ -159,6 +160,8 @@ export function CollectionClient({ slug }: { slug: string }) {
           ) : null}
         </div>
       </div>
+
+      <CategoryBanners categoryId={category.id} />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
         {hasFilters ? (

@@ -45,6 +45,14 @@ export function AdminIcon({
           <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
         </svg>
       );
+    case "banners":
+      return (
+        <svg {...props}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <circle cx="8.5" cy="10" r="1.5" />
+          <path d="m21 16-5-5-4 4-2-2-6 6" />
+        </svg>
+      );
     case "orders":
       return (
         <svg {...props}>
