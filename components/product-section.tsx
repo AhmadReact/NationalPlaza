@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Product } from "@/lib/data";
 import { ProductCard } from "./product-card";
 
@@ -11,9 +12,9 @@ export function ProductSection({
 }: {
   id: string;
   title: string;
-  tagline: string;
+  tagline?: string;
   products: Product[];
-  href?: string;
+  href?: string | null;
   accent?: "brand" | "teal" | "emerald" | "violet";
 }) {
   const accentBar = {
@@ -32,17 +33,21 @@ export function ProductSection({
             <h2 className="mt-3 font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-950">
               {title}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">{tagline}</p>
+            {tagline ? (
+              <p className="mt-1 text-sm text-slate-500">{tagline}</p>
+            ) : null}
           </div>
-          <a
-            href={href || `/categories/${id}`}
-            className="group inline-flex items-center gap-2 rounded-full border-2 border-brand-900/15 px-5 py-2 text-sm font-semibold text-brand-900 transition-colors hover:border-brand-700 hover:bg-brand-900 hover:text-white"
-          >
-            View All
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4 transition-transform group-hover:translate-x-1">
-              <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
+          {href ? (
+            <Link
+              href={href}
+              className="group inline-flex items-center gap-2 rounded-full border-2 border-brand-900/15 px-5 py-2 text-sm font-semibold text-brand-900 transition-colors hover:border-brand-700 hover:bg-brand-900 hover:text-white"
+            >
+              View All
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4 transition-transform group-hover:translate-x-1">
+                <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          ) : null}
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

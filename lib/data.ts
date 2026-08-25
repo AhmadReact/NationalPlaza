@@ -19,6 +19,8 @@ export interface Product {
   productId?: string;
   /** URL slug when different from id. */
   slug?: string;
+  /** Canonical product URL from the API when provided. */
+  href?: string;
   brand: string;
   name: string;
   /** undefined means "Inquire for price" */
@@ -31,6 +33,9 @@ export interface Product {
   badge?: string;
   /** Optional real product image from API */
   imageUrl?: string;
+  imageAlt?: string;
+  stock?: number;
+  onSale?: boolean;
 }
 
 export interface Category {

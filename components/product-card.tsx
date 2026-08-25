@@ -6,8 +6,9 @@ import { AddToCartButton } from "./add-to-cart-button";
 import { ApplianceArt } from "./appliance-art";
 
 export function ProductCard({ product }: { product: Product }) {
-  const href = `/products/${product.slug || product.id}`;
+  const href = product.href || `/products/${product.slug || product.id}`;
   const cartProductId = product.productId || product.id;
+  const outOfStock = product.stock !== undefined && product.stock <= 0;
   const discount =
     product.price && product.oldPrice
       ? Math.round((1 - product.price / product.oldPrice) * 100)
@@ -23,7 +24,7 @@ export function ProductCard({ product }: { product: Product }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={product.imageUrl}
-            alt={product.name}
+            alt={product.imageAlt ?? product.name}
             className="h-full w-full object-contain object-center p-6 sm:p-8"
           />
         ) : (
@@ -33,16 +34,21 @@ export function ProductCard({ product }: { product: Product }) {
           />
         )}
         <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
-          {discount !== null && (
+          {product.onSale ? (
+            <span className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
+              Sale
+            </span>
+          ) : null}
+          {discount !== null ? (
             <span className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
               -{discount}%
             </span>
-          )}
-          {product.badge && (
+          ) : null}
+          {product.badge ? (
             <span className="rounded-full bg-brand-950 px-2.5 py-1 text-[11px] font-semibold text-gold-300 shadow">
               {product.badge}
             </span>
-          )}
+          ) : null}
         </div>
         <button
           aria-label="Add to wishlist"
@@ -68,10 +74,12 @@ export function ProductCard({ product }: { product: Product }) {
           <Link href={href}>{product.name}</Link>
         </h3>
 
-        <div className="mt-2 flex items-center gap-1.5">
-          <Stars rating={product.rating} />
-          <span className="text-xs text-slate-400">({product.reviews})</span>
-        </div>
+        {product.reviews > 0 ? (
+          <div className="mt-2 flex items-center gap-1.5">
+            <Stars rating={product.rating} />
+            <span className="text-xs text-slate-400">({product.reviews})</span>
+          </div>
+        ) : null}
 
         <div className="mt-auto pt-3">
           {product.price ? (
@@ -93,6 +101,8 @@ export function ProductCard({ product }: { product: Product }) {
 
           <AddToCartButton
             productId={cartProductId}
+            disabled={outOfStock}
+            idleLabel={outOfStock ? "Out of stock" : "Add to Cart"}
             className="mt-3 w-full rounded-xl bg-brand-900 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>

@@ -14,6 +14,8 @@ export type Category = {
   children: Category[];
   isActive: boolean;
   sortOrder: number;
+  showOnHome: boolean;
+  homeSortOrder: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -26,6 +28,8 @@ export type CategoryTreeNode = {
   image: string | null;
   isActive: boolean;
   sortOrder: number;
+  showOnHome: boolean;
+  homeSortOrder: number;
   children: CategoryTreeNode[];
 };
 
@@ -36,6 +40,7 @@ export type CategoryListParams = {
   /** Omit for all. Pass `null` for root categories only. */
   parentId?: string | null;
   isActive?: boolean;
+  showOnHome?: boolean;
 };
 
 export type CreateCategoryInput = {
@@ -46,6 +51,8 @@ export type CreateCategoryInput = {
   parentId?: string | null;
   isActive?: boolean;
   sortOrder?: number;
+  showOnHome?: boolean;
+  homeSortOrder?: number;
 };
 
 export type UpdateCategoryInput = {
@@ -57,6 +64,8 @@ export type UpdateCategoryInput = {
   parentId?: string | null;
   isActive?: boolean;
   sortOrder?: number;
+  showOnHome?: boolean;
+  homeSortOrder?: number;
 };
 
 export type CategoryAttributeOption = {
@@ -245,6 +254,7 @@ export const categoryApi = createApi({
           search: params?.search,
           parentId: params?.parentId,
           isActive: params?.isActive,
+          showOnHome: params?.showOnHome,
         })}`,
         method: "GET",
       }),

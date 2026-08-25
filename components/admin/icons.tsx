@@ -53,6 +53,14 @@ export function AdminIcon({
           <path d="m21 16-5-5-4 4-2-2-6 6" />
         </svg>
       );
+    case "home":
+      return (
+        <svg {...props}>
+          <path d="M3 10.5 12 3l9 7.5" />
+          <path d="M5 10v10h14V10" />
+          <path d="M10 20v-6h4v6" />
+        </svg>
+      );
     case "orders":
       return (
         <svg {...props}>

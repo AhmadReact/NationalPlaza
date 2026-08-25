@@ -1,18 +1,7 @@
 import Link from "next/link";
+import { FooterPopularCategories } from "@/components/footer-popular-categories";
 
 const columns = [
-  {
-    heading: "Popular Categories",
-    links: [
-      { label: "Air Conditioners", href: "/#air-conditioners" },
-      { label: "Refrigerators", href: "/#refrigerators" },
-      { label: "Air Coolers", href: "/#air-coolers" },
-      { label: "LED TVs", href: "/#led-tvs" },
-      { label: "Washing Machines", href: "/#categories" },
-      { label: "Deep Freezers", href: "/#categories" },
-      { label: "Kitchen Appliances", href: "/#categories" },
-    ],
-  },
   {
     heading: "Policy",
     links: [
@@ -110,7 +99,8 @@ export function Footer() {
           </ul>
         </div>
 
-        {columns.map((column) => (
+          <FooterPopularCategories />
+          {columns.map((column) => (
           <nav key={column.heading} aria-label={column.heading}>
             <h3 className="text-sm font-bold uppercase tracking-widest text-gold-400">
               {column.heading}

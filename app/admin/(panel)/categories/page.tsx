@@ -26,6 +26,8 @@ type CategoryFormState = {
   parentId: string;
   isActive: boolean;
   sortOrder: string;
+  showOnHome: boolean;
+  homeSortOrder: string;
 };
 
 type ParentOption = {
@@ -42,6 +44,8 @@ const emptyForm: CategoryFormState = {
   parentId: "",
   isActive: true,
   sortOrder: "0",
+  showOnHome: false,
+  homeSortOrder: "0",
 };
 
 function slugify(value: string): string {
@@ -132,12 +136,18 @@ function filterTree(
   nodes: CategoryTreeNode[],
   search: string,
   activeOnly: boolean | null,
+  homeOnly: boolean | null,
 ): CategoryTreeNode[] {
   const query = search.trim().toLowerCase();
 
   return nodes
     .map((node) => {
-      const children = filterTree(node.children ?? [], search, activeOnly);
+      const children = filterTree(
+        node.children ?? [],
+        search,
+        activeOnly,
+        homeOnly,
+      );
       const matchesSearch =
         !query ||
         node.name.toLowerCase().includes(query) ||
@@ -145,8 +155,10 @@ function filterTree(
         (node.description ?? "").toLowerCase().includes(query);
       const matchesActive =
         activeOnly === null || node.isActive === activeOnly;
+      const matchesHome =
+        homeOnly === null || Boolean(node.showOnHome) === homeOnly;
 
-      if ((matchesSearch && matchesActive) || children.length > 0) {
+      if ((matchesSearch && matchesActive && matchesHome) || children.length > 0) {
         return { ...node, children };
       }
       return null;
@@ -224,6 +236,9 @@ function CategoryTreeRows({
                       label={node.isActive ? "Active" : "Inactive"}
                       tone={node.isActive ? "success" : "danger"}
                     />
+                    {node.showOnHome ? (
+                      <StatusPill label="On home" tone="info" />
+                    ) : null}
                     {hasChildren ? (
                       <span className="text-xs text-slate-400">
                         {children.length} child
@@ -297,6 +312,7 @@ export default function AdminCategoriesPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("");
+  const [homeFilter, setHomeFilter] = useState<"" | "true" | "false">("");
   /** null = expand all by default until the user changes it */
   const [expandedIds, setExpandedIds] = useState<Set<string> | null>(null);
 
@@ -328,10 +344,11 @@ export default function AdminCategoriesPage() {
   }, [error, isError]);
 
   const activeOnly = activeFilter === "" ? null : activeFilter === "true";
+  const homeOnly = homeFilter === "" ? null : homeFilter === "true";
 
   const filteredTree = useMemo(
-    () => filterTree(tree, search, activeOnly),
-    [tree, search, activeOnly],
+    () => filterTree(tree, search, activeOnly, homeOnly),
+    [tree, search, activeOnly, homeOnly],
   );
 
   const totalCount = countNodes(tree);
@@ -376,6 +393,8 @@ export default function AdminCategoriesPage() {
       parentId: resolvedParentId ?? "",
       isActive: node.isActive,
       sortOrder: String(node.sortOrder ?? 0),
+      showOnHome: Boolean(node.showOnHome),
+      homeSortOrder: String(node.homeSortOrder ?? 0),
     });
     setSlugTouched(true);
     setFormError(null);
@@ -436,6 +455,12 @@ export default function AdminCategoriesPage() {
       return;
     }
 
+    const homeSortOrder = Number(form.homeSortOrder);
+    if (!Number.isInteger(homeSortOrder) || homeSortOrder < 0) {
+      setFormError("Home sort order must be an integer of 0 or more.");
+      return;
+    }
+
     const parentId = form.parentId.trim() ? form.parentId.trim() : null;
 
     try {
@@ -448,6 +473,8 @@ export default function AdminCategoriesPage() {
           parentId,
           isActive: form.isActive,
           sortOrder,
+          showOnHome: form.showOnHome,
+          homeSortOrder,
         }).unwrap();
         dispatch(
           toast.success(result.message || "Category created successfully"),
@@ -469,6 +496,8 @@ export default function AdminCategoriesPage() {
           parentId,
           isActive: form.isActive,
           sortOrder,
+          showOnHome: form.showOnHome,
+          homeSortOrder,
         }).unwrap();
         dispatch(
           toast.success(result.message || "Category updated successfully"),
@@ -557,6 +586,17 @@ export default function AdminCategoriesPage() {
             <option value="true">Active</option>
             <option value="false">Inactive</option>
           </select>
+          <select
+            value={homeFilter}
+            onChange={(e) =>
+              setHomeFilter(e.target.value as "" | "true" | "false")
+            }
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-brand-950 outline-none focus:border-brand-600"
+          >
+            <option value="">All home flags</option>
+            <option value="true">On home</option>
+            <option value="false">Not on home</option>
+          </select>
           <button
             type="button"
             onClick={expandAll}
@@ -584,7 +624,7 @@ export default function AdminCategoriesPage() {
 
       <AdminPanel
         title={
-          search || activeFilter
+          search || activeFilter || homeFilter
             ? `${visibleCount} of ${totalCount} categor${totalCount === 1 ? "y" : "ies"}`
             : `${totalCount} categor${totalCount === 1 ? "y" : "ies"}`
         }
@@ -612,7 +652,7 @@ export default function AdminCategoriesPage() {
 
         {!isLoading && !listErrorMessage && filteredTree.length === 0 ? (
           <p className="py-10 text-center text-sm text-slate-500">
-            {search || activeFilter
+            {search || activeFilter || homeFilter
               ? "No categories match your filters."
               : "No categories yet. Add a root category to get started."}
           </p>
@@ -792,6 +832,49 @@ export default function AdminCategoriesPage() {
                     />
                     Active
                   </label>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Shop by Category
+                  </span>
+                  <label className="mt-auto flex items-center gap-2 rounded-xl border-2 border-brand-900/10 px-4 py-2.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={form.showOnHome}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          showOnHome: e.target.checked,
+                        }))
+                      }
+                      className="rounded border-slate-300"
+                    />
+                    Show on home
+                  </label>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Home sort order
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.homeSortOrder}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        homeSortOrder: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border-2 border-brand-900/10 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-600"
+                  />
+                  <span className="mt-1 block text-xs text-slate-400">
+                    Lower numbers appear first. Must be 0 or more.
+                  </span>
                 </label>
               </div>
 

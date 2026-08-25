@@ -6,6 +6,7 @@ export type AdminIconName =
   | "categories"
   | "brands"
   | "banners"
+  | "home"
   | "orders"
   | "customers"
   | "users"
@@ -47,6 +48,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Products", href: "/admin/products", icon: "products", permission: "PRODUCTS" },
       { label: "Categories", href: "/admin/categories", icon: "categories", permission: "PRODUCTS" },
+      { label: "Homepage", href: "/admin/home", icon: "home", permission: "PRODUCTS" },
       { label: "Brands", href: "/admin/brands", icon: "brands", permission: "PRODUCTS" },
       { label: "Banners", href: "/admin/banners", icon: "banners", permission: "PRODUCTS" },
     ],
@@ -132,6 +134,7 @@ export function visibleNavGroups(user: AuthUser | null | undefined): AdminNavGro
 const PATH_PERMISSIONS: Array<[string, Permission | null]> = [
   ["/admin/products", "PRODUCTS"],
   ["/admin/categories", "PRODUCTS"],
+  ["/admin/home", "PRODUCTS"],
   ["/admin/brands", "PRODUCTS"],
   ["/admin/banners", "PRODUCTS"],
   ["/admin/orders", "ORDERS"],

@@ -3,6 +3,10 @@ import {
   toCatalogQueryString,
   type CatalogApiParams,
 } from "@/lib/catalog-query";
+import type {
+  HomePage,
+  HomeProductCard,
+} from "@/lib/home";
 import { baseQueryWithInterceptor } from "@/lib/store/baseQuery";
 import type { ArtKind, Product as CardProduct } from "@/lib/data";
 import type {
@@ -168,12 +172,13 @@ export function getProductGalleryImages(product: StoreProduct): StoreProductImag
 
 /** Maps API product shape to the storefront ProductCard model. */
 export function toCardProduct(product: StoreProduct): CardProduct {
-  const { price, oldPrice } = getProductPricing(product);
+  const { price, oldPrice, hasSale } = getProductPricing(product);
 
   return {
     id: product.slug || product.id,
     productId: product.id,
     slug: product.slug,
+    href: `/products/${product.slug || product.id}`,
     brand: product.brand?.name ?? "",
     name: product.name,
     price,
@@ -184,6 +189,36 @@ export function toCardProduct(product: StoreProduct): CardProduct {
     tint: resolveTint(product.category?.slug ?? ""),
     badge: product.isFeatured ? "Featured" : undefined,
     imageUrl: product.thumbnail?.url ?? product.images?.[0]?.url,
+    imageAlt: product.thumbnail?.alt ?? product.name,
+    stock: product.stock,
+    onSale: hasSale,
+  };
+}
+
+/** Maps merchandised home-row products without inventing catalog fields. */
+export function toHomeCardProduct(product: HomeProductCard): CardProduct {
+  const displayPrice =
+    product.onSale && product.salePrice != null
+      ? product.salePrice
+      : product.price;
+
+  return {
+    id: product.slug || product.id,
+    productId: product.id,
+    slug: product.slug,
+    href: product.href,
+    brand: product.brand?.name ?? "",
+    name: product.name,
+    price: displayPrice,
+    oldPrice: product.onSale ? product.price : undefined,
+    reviews: product.reviewCount,
+    rating: product.averageRating,
+    art: resolveArt(product.category?.slug ?? ""),
+    tint: resolveTint(product.category?.slug ?? ""),
+    imageUrl: product.thumbnailUrl ?? undefined,
+    imageAlt: product.thumbnailAlt ?? product.name,
+    stock: product.stock,
+    onSale: product.onSale,
   };
 }
 
@@ -290,8 +325,30 @@ export async function fetchRelatedStoreProducts(
 export const customerApi = createApi({
   reducerPath: "customerApi",
   baseQuery: baseQueryWithInterceptor,
-  tagTypes: ["StoreProduct", "StoreCategory"],
+  tagTypes: ["StoreProduct", "StoreCategory", "StoreHome"],
   endpoints: (builder) => ({
+    getHomePage: builder.query<ApiMutationResponse<HomePage>, void>({
+      query: () => ({
+        url: "/home",
+        method: "GET",
+      }),
+      extraOptions: { skipErrorToast: true },
+      keepUnusedDataFor: 45,
+      transformResponse: (
+        response: ApiMutationResponse<HomePage | null | undefined>,
+      ): ApiMutationResponse<HomePage> => ({
+        ...response,
+        data: {
+          categories: Array.isArray(response.data?.categories)
+            ? response.data.categories
+            : [],
+          sections: Array.isArray(response.data?.sections)
+            ? response.data.sections
+            : [],
+        },
+      }),
+      providesTags: [{ type: "StoreHome", id: "PAGE" }],
+    }),
     getStoreProducts: builder.query<
       ApiListResponse<StoreProduct>,
       StoreProductListParams | void
@@ -412,6 +469,7 @@ export const customerApi = createApi({
 });
 
 export const {
+  useGetHomePageQuery,
   useGetStoreProductsQuery,
   useLazyGetStoreProductsQuery,
   useGetStoreProductByIdQuery,
