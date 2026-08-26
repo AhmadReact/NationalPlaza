@@ -1,5 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithInterceptor } from "@/lib/store/baseQuery";
+import type { OrderStatus } from "@/lib/order/status";
 
 export type Address = {
   id: string;
@@ -68,6 +69,8 @@ export type CheckoutPreview = {
   discountAmount: number;
   deliveryMethodName: string;
   shippingAmount: number;
+  shippingPending: boolean;
+  shippingMessage: string;
   taxRate: number;
   taxAmount: number;
   taxableAmount: number;
@@ -79,11 +82,17 @@ export type CheckoutPreview = {
   guestPhone?: string | null;
 };
 
-export type PlaceOrderResult = CheckoutPreview & {
+export type PlaceOrderResult = Omit<
+  CheckoutPreview,
+  "shippingMessage" | "guestEmail" | "guestPhone"
+> & {
   id: string;
   orderNumber: string;
-  status: string;
+  status: OrderStatus;
+  shippingMessage: string | null;
   notes: string | null;
+  guestEmail?: string | null;
+  guestPhone?: string | null;
   courier?: string | null;
   trackingNumber?: string | null;
   trackingUrl?: string | null;
@@ -279,6 +288,16 @@ export const checkoutApi = createApi({
       extraOptions: { skipErrorToast: true, skipAuthLogout: true },
       providesTags: (_r, _e, id) => [{ type: "Order", id }],
     }),
+    cancelCustomerOrder: builder.mutation<ApiResponse<PlaceOrderResult>, string>(
+      {
+        query: (id) => ({
+          url: `/customer/orders/${encodeURIComponent(id)}/cancel`,
+          method: "POST",
+        }),
+        extraOptions: { skipErrorToast: true },
+        invalidatesTags: (_r, _e, id) => [{ type: "Order", id }],
+      },
+    ),
     lookupGuestOrder: builder.mutation<
       ApiResponse<PlaceOrderResult>,
       { orderNumber: string; email: string }
@@ -308,4 +327,5 @@ export const {
   useLazyGetOrderByIdQuery,
   useGetGuestOrderByIdQuery,
   useLookupGuestOrderMutation,
+  useCancelCustomerOrderMutation,
 } = checkoutApi;

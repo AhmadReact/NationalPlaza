@@ -30,8 +30,7 @@ export type WhatsAppNotificationStatus =
 
 export type WhatsAppEventType =
   | "ORDER_CONFIRMATION"
-  | "ORDER_PAID"
-  | "ORDER_PACKED"
+  | "ORDER_CONFIRMED"
   | "ORDER_SHIPPED"
   | "ORDER_DELIVERED"
   | "ORDER_CANCELLED"
@@ -97,8 +96,7 @@ export const WHATSAPP_NOTIFICATION_STATUSES: WhatsAppNotificationStatus[] = [
 
 export const WHATSAPP_EVENT_TYPES: WhatsAppEventType[] = [
   "ORDER_CONFIRMATION",
-  "ORDER_PAID",
-  "ORDER_PACKED",
+  "ORDER_CONFIRMED",
   "ORDER_SHIPPED",
   "ORDER_DELIVERED",
   "ORDER_CANCELLED",

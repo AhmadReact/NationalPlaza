@@ -45,6 +45,7 @@ import {
   type TopProduct,
 } from "@/app/admin/(panel)/store/dashboardAPI";
 import type { OrderStatus } from "@/app/admin/(panel)/orders/store/orderAPI";
+import { normalizeDashboardOrderStatus } from "@/lib/order/status";
 import { selectAuthUser } from "@/app/admin/login/store/authSlice";
 import { StaffHome } from "@/components/admin/staff-home";
 import { formatPrice } from "@/lib/data";
@@ -67,8 +68,7 @@ const PERIOD_LABELS: Record<DashboardPeriodPreset, string> = {
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   PENDING: "#f59e0b",
-  PAID: "#244eec",
-  PACKED: "#1d2f8b",
+  CONFIRMED: "#244eec",
   SHIPPED: "#0ea5e9",
   DELIVERED: "#059669",
   CANCELLED: "#ef4444",
@@ -80,8 +80,7 @@ const STATUS_TONES: Record<
   "warning" | "info" | "primary" | "success" | "error" | "inherit"
 > = {
   PENDING: "warning",
-  PAID: "info",
-  PACKED: "primary",
+  CONFIRMED: "info",
   SHIPPED: "info",
   DELIVERED: "success",
   CANCELLED: "error",
@@ -90,8 +89,7 @@ const STATUS_TONES: Record<
 
 const ALL_STATUSES: OrderStatus[] = [
   "PENDING",
-  "PAID",
-  "PACKED",
+  "CONFIRMED",
   "SHIPPED",
   "DELIVERED",
   "CANCELLED",
@@ -239,7 +237,9 @@ export function AdminDashboardView() {
     const counts = new Map<OrderStatus, number>();
     for (const status of ALL_STATUSES) counts.set(status, 0);
     for (const row of charts?.ordersByStatus ?? []) {
-      counts.set(row.status, row.count);
+      const status = normalizeDashboardOrderStatus(String(row.status));
+      if (!status) continue;
+      counts.set(status, (counts.get(status) ?? 0) + row.count);
     }
 
     return ALL_STATUSES.map((status, id) => ({

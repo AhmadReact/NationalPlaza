@@ -43,6 +43,10 @@ import {
 } from "@/lib/phone";
 import { toast } from "@/lib/store/snackbarSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import {
+  checkoutShippingCopy,
+  formatDeliveryEta,
+} from "@/lib/order/status";
 
 const emptyShipping: GuestCheckoutAddressInput = {
   fullName: "",
@@ -381,9 +385,7 @@ export default function CheckoutPage() {
     saveLastPlacedOrder(result);
     if (isGuest) clearGuestToken();
     dispatch(clearCartState());
-    dispatch(
-      toast.success(`Order placed successfully — ${result.orderNumber}`),
-    );
+    dispatch(toast.success(`Order ${result.orderNumber} has been placed.`));
     setOtpOpen(false);
     setOtpSession(null);
     setOtpError(null);
@@ -516,25 +518,35 @@ export default function CheckoutPage() {
 
   const summaryRows = useMemo(() => {
     if (!preview) return [];
-    return [
+    const rows: Array<{
+      label: string;
+      value: string;
+      hint?: string;
+      pending?: boolean;
+    }> = [
       { label: "Subtotal", value: formatPrice(preview.subtotal) },
-      ...(preview.discountAmount > 0
-        ? [
-            {
-              label: `Discount${preview.couponCode ? ` (${preview.couponCode})` : ""}`,
-              value: `−${formatPrice(preview.discountAmount)}`,
-            },
-          ]
-        : []),
-      {
-        label: `Shipping (${preview.deliveryMethodName})`,
-        value: formatPrice(preview.shippingAmount),
-      },
-      {
+    ];
+    if (preview.discountAmount > 0) {
+      rows.push({
+        label: `Discount${preview.couponCode ? ` (${preview.couponCode})` : ""}`,
+        value: `−${formatPrice(preview.discountAmount)}`,
+      });
+    }
+    if (preview.taxAmount > 0) {
+      rows.push({
         label: `Tax (${Math.round(preview.taxRate * 100)}%)`,
         value: formatPrice(preview.taxAmount),
-      },
-    ];
+      });
+    }
+    rows.push({
+      label: preview.deliveryMethodName
+        ? `Shipping (${preview.deliveryMethodName})`
+        : "Shipping",
+      value: "To be confirmed",
+      hint: checkoutShippingCopy(preview),
+      pending: true,
+    });
+    return rows;
   }, [preview]);
 
   if (loadingGate) {
@@ -579,7 +591,7 @@ export default function CheckoutPage() {
             <div className="space-y-6">
               {isAuthenticated && customerUser?.email ? (
                 <p className="rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-sm text-brand-900">
-                  We’ll send your order confirmation to {customerUser.email}.
+                  We’ll send order updates to {customerUser.email}.
                 </p>
               ) : null}
               {!isAuthenticated && (
@@ -798,34 +810,42 @@ export default function CheckoutPage() {
                   Delivery method
                 </h2>
                 <ul className="mt-4 space-y-3">
-                  {deliveryMethods.map((method) => (
-                    <li key={method.id}>
-                      <label className="flex cursor-pointer gap-3 rounded-2xl border-2 border-slate-200 p-4 has-[:checked]:border-brand-700">
-                        <input
-                          type="radio"
-                          name="deliveryMethod"
-                          checked={deliveryMethodId === method.id}
-                          onChange={() => setDeliveryMethodId(method.id)}
-                          className="mt-1"
-                        />
-                        <span className="flex-1 text-sm">
-                          <span className="flex items-center justify-between gap-2">
-                            <span className="font-bold text-brand-950">
-                              {method.name}
+                  {deliveryMethods.map((method) => {
+                    const eta = formatDeliveryEta(
+                      method.estimatedDaysMin,
+                      method.estimatedDaysMax,
+                    );
+                    return (
+                      <li key={method.id}>
+                        <label className="flex cursor-pointer gap-3 rounded-2xl border-2 border-slate-200 p-4 has-[:checked]:border-brand-700">
+                          <input
+                            type="radio"
+                            name="deliveryMethod"
+                            checked={deliveryMethodId === method.id}
+                            onChange={() => setDeliveryMethodId(method.id)}
+                            className="mt-1"
+                          />
+                          <span className="flex-1 text-sm">
+                            <span className="flex items-center justify-between gap-2">
+                              <span className="font-bold text-brand-950">
+                                {method.name}
+                              </span>
+                              {eta ? (
+                                <span className="text-xs font-semibold text-slate-500">
+                                  {eta}
+                                </span>
+                              ) : null}
                             </span>
-                            <span className="font-bold">
-                              {formatPrice(method.price)}
-                            </span>
+                            {method.description && (
+                              <span className="mt-1 block text-slate-500">
+                                {method.description}
+                              </span>
+                            )}
                           </span>
-                          {method.description && (
-                            <span className="mt-1 block text-slate-500">
-                              {method.description}
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
+                        </label>
+                      </li>
+                    );
+                  })}
                 </ul>
               </section>
 
@@ -931,14 +951,24 @@ export default function CheckoutPage() {
                     {summaryRows
                       .filter((row) => row.label !== "Subtotal")
                       .map((row) => (
-                        <div
-                          key={row.label}
-                          className="flex justify-between gap-3"
-                        >
-                          <dt className="text-slate-500">{row.label}</dt>
-                          <dd className="font-semibold text-brand-950">
-                            {row.value}
-                          </dd>
+                        <div key={row.label}>
+                          <div className="flex justify-between gap-3">
+                            <dt className="text-slate-500">{row.label}</dt>
+                            <dd
+                              className={`font-semibold ${
+                                row.pending
+                                  ? "text-slate-600"
+                                  : "text-brand-950"
+                              }`}
+                            >
+                              {row.value}
+                            </dd>
+                          </div>
+                          {row.hint ? (
+                            <p className="mt-1 text-xs text-slate-500">
+                              {row.hint}
+                            </p>
+                          ) : null}
                         </div>
                       ))}
                     <div className="flex justify-between gap-3 border-t border-slate-100 pt-3">
@@ -952,8 +982,8 @@ export default function CheckoutPage() {
                   !previewError && (
                     <p className="pt-1 text-xs text-slate-400">
                       {isAuthenticated
-                        ? "Select address and delivery to calculate shipping & tax."
-                        : "Enter email, shipping, and delivery to calculate shipping & tax."}
+                        ? "Select address and delivery to see tax and totals."
+                        : "Enter email, shipping, and delivery to see tax and totals."}
                     </p>
                   )
                 )}

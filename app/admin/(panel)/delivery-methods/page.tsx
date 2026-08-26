@@ -269,7 +269,7 @@ export default function AdminDeliveryMethodsPage() {
     <>
       <AdminPageHeader
         title="Delivery"
-        description="Shipping methods, rates, and estimated delivery times shown at checkout."
+        description="Shipping methods and estimated delivery times offered at checkout. Shipping is quoted when staff confirm an order."
         action={
           <AdminPrimaryButton onClick={openCreate}>
             Add method

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  useCancelCustomerOrderMutation,
   useGetGuestOrderByIdQuery,
   useGetOrderByIdQuery,
 } from "@/app/store/checkoutAPI";
@@ -13,14 +14,21 @@ import {
 } from "@/app/store/customerAuthSlice";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { OrderStatusTimeline } from "@/components/order-timeline";
+import { OrderTrackingDetails } from "@/components/order-tracking";
 import { getFetchErrorMessage, isNotFoundError } from "@/lib/api/errorMessage";
 import { formatPrice } from "@/lib/data";
 import { maskEmail, resolveOrderNotifyEmail } from "@/lib/email";
 import { readLastPlacedOrder } from "@/lib/order/lastOrder";
+import {
+  canCustomerCancel,
+  isShippingPending,
+  orderStatusLabel,
+  pendingShippingCopy,
+} from "@/lib/order/status";
 import { maskPhone, resolveOrderNotifyPhone } from "@/lib/phone";
 import { toast } from "@/lib/store/snackbarSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
-import { OrderTrackingDetails } from "@/components/order-tracking";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
@@ -58,8 +66,19 @@ export default function OrderClient({ id }: { id: string }) {
     skip: skipGuest,
   });
 
+  const [cancelCustomerOrder, { isLoading: cancelling }] =
+    useCancelCustomerOrderMutation();
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
   const order = customerData?.data ?? guestData?.data ?? cachedOrder;
   const canDownloadInvoice = Boolean(accessToken && customerData?.data);
+  const canCancel = Boolean(
+    accessToken &&
+      customerData?.data &&
+      order &&
+      canCustomerCancel(order.status),
+  );
+  const shippingPending = order ? isShippingPending(order) : false;
   const notifyPhone = resolveOrderNotifyPhone(order);
   const maskedNotifyPhone = notifyPhone ? maskPhone(notifyPhone) : null;
   const notifyEmail = resolveOrderNotifyEmail(order, customerUser?.email);
@@ -99,6 +118,24 @@ export default function OrderClient({ id }: { id: string }) {
       URL.revokeObjectURL(url);
     } catch {
       dispatch(toast.error("Could not download invoice."));
+    }
+  };
+
+  const onCancelOrder = async () => {
+    if (!canCancel || !order) return;
+    try {
+      await cancelCustomerOrder(order.id).unwrap();
+      setConfirmCancel(false);
+      dispatch(toast.success("Order cancelled."));
+    } catch (error) {
+      dispatch(
+        toast.error(
+          getFetchErrorMessage(
+            error as { status?: number | string; data?: unknown },
+            "Could not cancel this order.",
+          ),
+        ),
+      );
     }
   };
 
@@ -146,9 +183,18 @@ export default function OrderClient({ id }: { id: string }) {
           ) : order ? (
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
               {placed && (
-                <p className="mb-4 rounded-full bg-emerald-50 px-4 py-2 text-center text-sm font-semibold text-emerald-700">
-                  Order placed successfully — {order.orderNumber}.
-                </p>
+                <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center">
+                  <p className="text-sm font-semibold text-emerald-800">
+                    Your order has been placed and we will confirm your order.
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-800">
+                    Order number:{" "}
+                    <span className="font-extrabold">{order.orderNumber}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-800">
+                    A representative will call with shipping charges.
+                  </p>
+                </div>
               )}
               {placed && !accessToken ? (
                 <p className="mb-4 rounded-2xl border border-gold-200 bg-gold-50 px-4 py-3 text-center text-sm text-brand-950">
@@ -164,14 +210,14 @@ export default function OrderClient({ id }: { id: string }) {
                   </Link>
                 </p>
               ) : null}
-              {placed && maskedNotifyEmail ? (
+              {placed && (maskedNotifyEmail || maskedNotifyPhone) ? (
                 <p className="mb-4 rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-center text-sm text-brand-900">
-                  We’ll email order updates to {maskedNotifyEmail}.
-                </p>
-              ) : null}
-              {placed && maskedNotifyPhone ? (
-                <p className="mb-4 rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-center text-sm text-brand-900">
-                  We’ll send order updates to WhatsApp at {maskedNotifyPhone}.
+                  Email and WhatsApp updates are sent in the background
+                  {maskedNotifyEmail ? ` to ${maskedNotifyEmail}` : ""}
+                  {maskedNotifyPhone
+                    ? `${maskedNotifyEmail ? " and WhatsApp at " : " to WhatsApp at "}${maskedNotifyPhone}`
+                    : ""}
+                  . Delivery of those messages is not instant.
                 </p>
               ) : null}
 
@@ -181,7 +227,9 @@ export default function OrderClient({ id }: { id: string }) {
               </h1>
               <p className="mt-2 text-sm text-slate-500">
                 Status:{" "}
-                <span className="font-bold text-brand-800">{order.status}</span>
+                <span className="font-bold text-brand-800">
+                  {orderStatusLabel(order.status)}
+                </span>
                 {order.createdAt && (
                   <>
                     {" "}
@@ -231,19 +279,32 @@ export default function OrderClient({ id }: { id: string }) {
                     </dd>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <dt className="text-slate-500">
-                    Shipping ({order.deliveryMethodName})
-                  </dt>
-                  <dd className="font-semibold">
-                    {formatPrice(order.shippingAmount)}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-slate-500">Tax</dt>
-                  <dd className="font-semibold">
-                    {formatPrice(order.taxAmount)}
-                  </dd>
+                {order.taxAmount > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-500">Tax</dt>
+                    <dd className="font-semibold">
+                      {formatPrice(order.taxAmount)}
+                    </dd>
+                  </div>
+                )}
+                <div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-slate-500">
+                      Shipping
+                      {order.deliveryMethodName
+                        ? ` (${order.deliveryMethodName})`
+                        : ""}
+                    </dt>
+                    <dd
+                      className={`font-semibold ${
+                        shippingPending ? "text-slate-600" : ""
+                      }`}
+                    >
+                      {shippingPending
+                        ? pendingShippingCopy(order)
+                        : formatPrice(order.shippingAmount)}
+                    </dd>
+                  </div>
                 </div>
                 <div className="flex justify-between border-t border-slate-100 pt-3">
                   <dt className="font-bold text-brand-950">Total</dt>
@@ -278,6 +339,8 @@ export default function OrderClient({ id }: { id: string }) {
                 </div>
               )}
 
+              <OrderStatusTimeline status={order.status} className="mt-8" />
+
               <OrderTrackingDetails
                 className="mt-8"
                 courier={order.courier}
@@ -295,6 +358,38 @@ export default function OrderClient({ id }: { id: string }) {
                     Download invoice
                   </button>
                 )}
+                {canCancel && !confirmCancel ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmCancel(true)}
+                    className="rounded-full border-2 border-red-200 px-5 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50"
+                  >
+                    Cancel order
+                  </button>
+                ) : null}
+                {canCancel && confirmCancel ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-slate-600">
+                      Cancel this order?
+                    </span>
+                    <button
+                      type="button"
+                      disabled={cancelling}
+                      onClick={() => void onCancelOrder()}
+                      className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                    >
+                      {cancelling ? "Cancelling…" : "Yes, cancel"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={cancelling}
+                      onClick={() => setConfirmCancel(false)}
+                      className="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-brand-900 disabled:opacity-60"
+                    >
+                      Keep order
+                    </button>
+                  </div>
+                ) : null}
                 <Link
                   href="/"
                   className="rounded-full border-2 border-brand-900/15 px-5 py-2.5 text-sm font-semibold text-brand-900 hover:border-brand-700"

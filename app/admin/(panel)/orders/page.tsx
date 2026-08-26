@@ -21,6 +21,11 @@ import {
 } from "@/app/admin/(panel)/orders/store/orderAPI";
 import { formatPrice } from "@/lib/data";
 import {
+  isShippingPending,
+  parseShippingAmount,
+  pendingShippingCopy,
+} from "@/lib/order/status";
+import {
   canAccessEmailAdmin,
   canAccessWhatsAppAdmin,
 } from "@/lib/admin-auth";
@@ -38,8 +43,7 @@ function orderTone(status?: string) {
   switch (normalized) {
     case "DELIVERED":
       return "success" as const;
-    case "PAID":
-    case "PACKED":
+    case "CONFIRMED":
     case "SHIPPED":
       return "info" as const;
     case "PENDING":
@@ -142,6 +146,7 @@ function AdminOrdersPageInner() {
     trackingNumber: "",
     trackingUrl: "",
   });
+  const [shippingAmountDraft, setShippingAmountDraft] = useState("");
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useGetOrdersQuery({
@@ -195,6 +200,11 @@ function AdminOrdersPageInner() {
 
   const selectedStatus = (statusDraft || order?.status) as OrderStatus | "";
   const showShippedForm = selectedStatus === "SHIPPED";
+  const showConfirmShippingForm = Boolean(
+    order &&
+      order.status === "PENDING" &&
+      selectedStatus === "CONFIRMED",
+  );
 
   const listErrorMessage = useMemo(() => {
     if (!isError) return null;
@@ -219,6 +229,7 @@ function AdminOrdersPageInner() {
     setStatusDraft("");
     setConfirmStatus(null);
     setShippingDraft({ courier: "", trackingNumber: "", trackingUrl: "" });
+    setShippingAmountDraft("");
   }
 
   function closeDetail(force = false) {
@@ -227,6 +238,7 @@ function AdminOrdersPageInner() {
     setStatusDraft("");
     setConfirmStatus(null);
     setShippingDraft({ courier: "", trackingNumber: "", trackingUrl: "" });
+    setShippingAmountDraft("");
   }
 
   function hydrateShipping(nextOrder: Order) {
@@ -240,12 +252,24 @@ function AdminOrdersPageInner() {
   async function applyStatus(
     nextStatus: OrderStatus,
     extras?: {
+      shippingAmount?: number;
       courier?: string;
       trackingNumber?: string;
       trackingUrl?: string;
     },
   ) {
     if (!order) return;
+
+    if (
+      nextStatus === "CONFIRMED" &&
+      order.status !== "CONFIRMED" &&
+      typeof extras?.shippingAmount !== "number"
+    ) {
+      dispatch(
+        toast.error("shippingAmount is required when confirming an order."),
+      );
+      return;
+    }
 
     try {
       const result = await updateOrderStatus({
@@ -255,9 +279,16 @@ function AdminOrdersPageInner() {
       }).unwrap();
       setStatusDraft(result.data.status);
       setConfirmStatus(null);
+      setShippingAmountDraft("");
       hydrateShipping(result.data);
 
-      if (nextStatus === "SHIPPED") {
+      if (nextStatus === "CONFIRMED") {
+        dispatch(
+          toast.success(
+            "Order confirmed. Email and WhatsApp notifications will be sent if the customer has a valid address / number.",
+          ),
+        );
+      } else if (nextStatus === "SHIPPED") {
         dispatch(
           toast.success(
             order.status === "SHIPPED"
@@ -288,12 +319,18 @@ function AdminOrdersPageInner() {
   function handleStatusChange(nextStatus: OrderStatus) {
     if (!order || nextStatus === order.status) {
       setStatusDraft(nextStatus);
+      setShippingAmountDraft("");
       return;
     }
 
     setStatusDraft(nextStatus);
 
     if (nextStatus === "SHIPPED") {
+      setConfirmStatus(null);
+      return;
+    }
+
+    if (nextStatus === "CONFIRMED") {
       setConfirmStatus(null);
       return;
     }
@@ -322,6 +359,20 @@ function AdminOrdersPageInner() {
       trackingNumber: trackingNumber || undefined,
       trackingUrl: trackingUrl || undefined,
     });
+  }
+
+  function submitConfirmed() {
+    if (!order) return;
+    const shippingAmount = parseShippingAmount(shippingAmountDraft);
+    if (shippingAmount === null) {
+      dispatch(
+        toast.error(
+          "Enter a shipping amount (0 or more, up to 2 decimal places).",
+        ),
+      );
+      return;
+    }
+    void applyStatus("CONFIRMED", { shippingAmount });
   }
 
   async function downloadInvoice() {
@@ -362,7 +413,7 @@ function AdminOrdersPageInner() {
     <>
       <AdminPageHeader
         title="Orders"
-        description="Track and fulfill customer and guest orders."
+        description="Confirm orders, quote shipping, and fulfill customer and guest orders."
       />
 
       <div className="mb-4 flex flex-col gap-3">
@@ -493,11 +544,11 @@ function AdminOrdersPageInner() {
                   <p className="truncate font-medium text-brand-950">
                     {customerLabel(item)}
                   </p>
-                  {item.guestEmail && item.guestPhone ? (
+                  {item.guestPhone ? (
                     <p className="truncate text-xs text-slate-500">
                       {item.guestPhone}
                     </p>
-                  ) : item.guestEmail ? null : item.shippingAddress?.phone ? (
+                  ) : !item.guestEmail && item.shippingAddress?.phone ? (
                     <p className="truncate text-xs text-slate-500">
                       {item.shippingAddress.phone}
                     </p>
@@ -704,6 +755,53 @@ function AdminOrdersPageInner() {
                     trackingUrl={order.trackingUrl}
                   />
 
+                  {showConfirmShippingForm ? (
+                    <div className="rounded-xl border border-brand-100 bg-brand-50/50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Confirm order
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Enter the quoted shipping amount from the confirmation
+                        call. 0 is allowed for free shipping.
+                      </p>
+                      <label className="mt-3 block">
+                        <span className="text-xs font-semibold text-slate-600">
+                          Shipping amount *
+                        </span>
+                        <input
+                          inputMode="decimal"
+                          value={shippingAmountDraft}
+                          onChange={(e) =>
+                            setShippingAmountDraft(e.target.value)
+                          }
+                          placeholder="250.00"
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
+                        />
+                      </label>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={isUpdatingStatus}
+                          onClick={submitConfirmed}
+                          className="rounded-xl bg-brand-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                        >
+                          {isUpdatingStatus ? "Saving…" : "Confirm order"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isUpdatingStatus}
+                          onClick={() => {
+                            setStatusDraft(order.status);
+                            setShippingAmountDraft("");
+                          }}
+                          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-brand-950 hover:bg-brand-50 disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
                   {showShippedForm ? (
                     <div className="rounded-xl border border-brand-100 bg-brand-50/50 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -861,9 +959,16 @@ function AdminOrdersPageInner() {
                       ) : null}
                       <div className="flex justify-between gap-3">
                         <span className="text-slate-500">
-                          Shipping ({order.deliveryMethodName})
+                          Shipping
+                          {order.deliveryMethodName
+                            ? ` (${order.deliveryMethodName})`
+                            : ""}
                         </span>
-                        <span>{formatPrice(order.shippingAmount)}</span>
+                        <span>
+                          {isShippingPending(order)
+                            ? pendingShippingCopy(order)
+                            : formatPrice(order.shippingAmount)}
+                        </span>
                       </div>
                       <div className="flex justify-between gap-3">
                         <span className="text-slate-500">

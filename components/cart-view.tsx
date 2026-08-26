@@ -11,6 +11,7 @@ import {
 import { selectCart, selectCartStatus } from "@/app/store/cartSlice";
 import { selectCustomerIsAuthenticated } from "@/app/store/customerAuthSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import { DEFAULT_SHIPPING_MESSAGE } from "@/lib/order/status";
 import { useEffect } from "react";
 
 export function CartView() {
@@ -165,9 +166,15 @@ export function CartView() {
                 {formatPrice(cart?.subtotal ?? 0)}
               </span>
             </div>
-            <p className="mt-2 text-xs text-slate-400">
-              Shipping and tax calculated at checkout.
+            <p className="mt-3 text-xs text-slate-500">
+              {DEFAULT_SHIPPING_MESSAGE}
             </p>
+            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-sm">
+              <span className="font-bold text-brand-950">Total</span>
+              <span className="font-display text-xl font-extrabold text-brand-950">
+                {formatPrice(cart?.subtotal ?? 0)}
+              </span>
+            </div>
             <Link
               href="/checkout"
               className="mt-6 flex w-full items-center justify-center rounded-full bg-brand-900 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-700"

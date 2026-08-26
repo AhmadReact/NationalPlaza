@@ -1,14 +1,12 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithInterceptor } from "@/lib/store/baseQuery";
+import {
+  ORDER_STATUSES,
+  type OrderStatus,
+} from "@/lib/order/status";
 
-export type OrderStatus =
-  | "PENDING"
-  | "PAID"
-  | "PACKED"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED"
-  | "RETURNED";
+export type { OrderStatus };
+export { ORDER_STATUSES };
 
 export type AddressSnapshot = {
   fullName: string;
@@ -32,6 +30,7 @@ export type OrderLineItem = {
 
 export type UpdateOrderStatusRequest = {
   status: OrderStatus;
+  shippingAmount?: number;
   courier?: string;
   trackingNumber?: string;
   trackingUrl?: string;
@@ -47,6 +46,8 @@ export type Order = {
   discountAmount: number;
   deliveryMethodName: string;
   shippingAmount: number;
+  shippingPending: boolean;
+  shippingMessage: string | null;
   taxRate: number;
   taxAmount: number;
   total: number;
@@ -111,16 +112,6 @@ function toQueryString(params: OrderListParams): string {
   const query = searchParams.toString();
   return query ? `?${query}` : "";
 }
-
-export const ORDER_STATUSES: OrderStatus[] = [
-  "PENDING",
-  "PAID",
-  "PACKED",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
-  "RETURNED",
-];
 
 export const orderApi = createApi({
   reducerPath: "orderApi",
