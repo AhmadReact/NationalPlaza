@@ -24,6 +24,7 @@ import { bannerApi } from "@/app/admin/(panel)/banners/store/bannerAPI";
 import { homeSectionApi } from "@/app/admin/(panel)/home/store/homeSectionAPI";
 import { dashboardApi } from "@/app/admin/(panel)/store/dashboardAPI";
 import { deliveryApi } from "@/app/admin/(panel)/delivery-methods/store/deliveryAPI";
+import { accountApi } from "@/app/store/accountAPI";
 import { customerApi } from "@/app/store/customerAPI";
 import { cartApi } from "@/app/store/cartAPI";
 import { cartReducer } from "@/app/store/cartSlice";
@@ -69,6 +70,7 @@ const rootReducer = combineReducers({
   [dashboardApi.reducerPath]: dashboardApi.reducer,
   [deliveryApi.reducerPath]: deliveryApi.reducer,
   [customerApi.reducerPath]: customerApi.reducer,
+  [accountApi.reducerPath]: accountApi.reducer,
   [cartApi.reducerPath]: cartApi.reducer,
   [checkoutApi.reducerPath]: checkoutApi.reducer,
 });
@@ -104,6 +106,7 @@ export const makeStore = () => {
         dashboardApi.middleware,
         deliveryApi.middleware,
         customerApi.middleware,
+        accountApi.middleware,
         cartApi.middleware,
         checkoutApi.middleware,
       ),

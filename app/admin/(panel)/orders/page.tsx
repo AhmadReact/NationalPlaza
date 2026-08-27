@@ -19,6 +19,7 @@ import {
   type Order,
   type OrderStatus,
 } from "@/app/admin/(panel)/orders/store/orderAPI";
+import { clientApiUrl } from "@/lib/api/clientBase";
 import { formatPrice } from "@/lib/data";
 import {
   isShippingPending,
@@ -32,9 +33,6 @@ import {
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { toast } from "@/lib/store/snackbarSlice";
 import { OrderTrackingDetails } from "@/components/order-tracking";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 const STOCK_RESTORING_STATUSES: OrderStatus[] = ["CANCELLED", "RETURNED"];
 
@@ -384,7 +382,7 @@ function AdminOrdersPageInner() {
     setIsDownloadingInvoice(true);
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/orders/${encodeURIComponent(order.id)}/invoice`,
+        clientApiUrl(`/orders/${encodeURIComponent(order.id)}/invoice`),
         {
           headers: {
             authorization: `Bearer ${accessToken}`,

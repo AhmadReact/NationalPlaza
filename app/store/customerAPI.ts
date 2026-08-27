@@ -234,92 +234,10 @@ export function getStoreProductTint(product: StoreProduct): string {
   return resolveTint(product.category?.slug ?? "");
 }
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-
-async function fetchJson<T>(path: string): Promise<T | null> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api${path}`, {
-      headers: { accept: "application/json" },
-      next: { revalidate: 60 },
-    });
-
-    if (!res.ok) return null;
-
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
-}
-
-export async function fetchStoreProductBySlug(
-  slug: string,
-): Promise<StoreProduct | null> {
-  const json = await fetchJson<ApiMutationResponse<StoreProduct>>(
-    `/products/slug/${encodeURIComponent(slug)}`,
-  );
-  return json?.data ?? null;
-}
-
-export async function fetchStoreProductById(
-  id: string,
-): Promise<StoreProduct | null> {
-  const json = await fetchJson<ApiMutationResponse<StoreProduct>>(
-    `/products/${encodeURIComponent(id)}`,
-  );
-  return json?.data ?? null;
-}
-
-/** Resolve a product by slug (preferred) or id. */
-export async function fetchStoreProduct(
-  param: string,
-): Promise<StoreProduct | null> {
-  const bySlug = await fetchStoreProductBySlug(param);
-  if (bySlug) return bySlug;
-  return fetchStoreProductById(param);
-}
-
-export async function fetchStoreCategoryBySlug(
-  slug: string,
-): Promise<Category | null> {
-  const json = await fetchJson<ApiMutationResponse<Category>>(
-    `/categories/slug/${encodeURIComponent(slug)}`,
-  );
-  return json?.data ?? null;
-}
-
-export async function fetchStoreCategoryTree(): Promise<CategoryTreeNode[]> {
-  const json = await fetchJson<ApiMutationResponse<CategoryTreeNode[]>>(
-    "/categories/tree",
-  );
-  return json?.data ?? [];
-}
-
 export function resolveCategoryFiltersId(
   data: CategoryFiltersData | null | undefined,
 ): string | undefined {
   return data?.category?.id ?? data?.id;
-}
-
-export async function fetchRelatedStoreProducts(
-  categoryId: string,
-  excludeId: string,
-  limit = 4,
-): Promise<StoreProduct[]> {
-  if (!categoryId) return [];
-
-  const json = await fetchJson<ApiListResponse<StoreProduct>>(
-    `/products${toQueryString({
-      page: 1,
-      limit: limit + 4,
-      categoryId,
-      status: "ACTIVE",
-    })}`,
-  );
-
-  return (json?.data ?? [])
-    .filter((p) => p.id !== excludeId)
-    .slice(0, limit);
 }
 
 export const customerApi = createApi({

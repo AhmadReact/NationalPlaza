@@ -1,7 +1,5 @@
+import { clientApiUrl } from "@/lib/api/clientBase";
 import { normalizeAuthUser, type AuthUser } from "@/lib/rbac";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export type { AuthUser };
 
@@ -65,7 +63,7 @@ function extractErrorMessage(payload: unknown, fallback: string): string {
 export async function loginRequest(
   credentials: LoginCredentials,
 ): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+  const response = await fetch(clientApiUrl("/auth/login"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

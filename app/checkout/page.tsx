@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import {
   useCreateAddressMutation,
   useGetAddressesQuery,
+  type CreateAddressInput,
+} from "@/app/store/accountAPI";
+import {
   useGetDeliveryMethodsQuery,
   usePlaceGuestOrderMutation,
   usePlaceOrderMutation,
@@ -17,7 +20,6 @@ import {
   type CheckoutInput,
   type CheckoutOtpResult,
   type CheckoutPreview,
-  type CreateAddressInput,
   type GuestCheckoutAddressInput,
   type GuestCheckoutInput,
   type PlaceOrderResult,

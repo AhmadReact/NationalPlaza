@@ -9,7 +9,7 @@ import { Header } from "@/components/header";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 
 function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/cart";
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/account";
   return raw;
 }
 
@@ -46,7 +46,7 @@ export default function LoginClient() {
           <p className="mt-2 text-sm text-slate-500">
             {fromOrder
               ? "Sign in to view this order. Guest confirmation emails do not need an account."
-              : "Sign in to checkout. Guest cart items merge automatically."}
+              : "Sign in for your cart, wishlist, addresses, and saved preferences. Guest cart items merge automatically."}
           </p>
 
           <form

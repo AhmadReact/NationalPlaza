@@ -4,8 +4,15 @@ import Link from "next/link";
 import { formatPrice, type Product } from "@/lib/data";
 import { AddToCartButton } from "./add-to-cart-button";
 import { ApplianceArt } from "./appliance-art";
+import { WishlistButton } from "./wishlist-button";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  showWishlist = true,
+}: {
+  product: Product;
+  showWishlist?: boolean;
+}) {
   const href = product.href || `/products/${product.slug || product.id}`;
   const cartProductId = product.productId || product.id;
   const outOfStock = product.stock !== undefined && product.stock <= 0;
@@ -50,20 +57,12 @@ export function ProductCard({ product }: { product: Product }) {
             </span>
           ) : null}
         </div>
-        <button
-          aria-label="Add to wishlist"
-          className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-slate-500 opacity-0 shadow transition-all duration-300 group-hover:opacity-100 hover:text-red-500 hover:scale-110"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="h-4.5 w-4.5"
-          >
-            <path d="M19 14c1.5-1.5 3-3.3 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3.4 1-4.5 2.5C10.9 4 9.3 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7z" />
-          </svg>
-        </button>
+        {showWishlist ? (
+          <WishlistButton
+            productId={cartProductId}
+            className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-slate-500 opacity-0 shadow transition-all duration-300 group-hover:opacity-100 hover:scale-110 hover:text-red-500 aria-[pressed=true]:opacity-100 aria-[pressed=true]:text-red-500"
+          />
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col p-4">

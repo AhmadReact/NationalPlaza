@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { addToCart } from "@/app/store/cartThunk";
+import { WishlistButton } from "@/components/wishlist-button";
 import { useAppDispatch } from "@/lib/store/hooks";
 
 export function PurchaseActions({
@@ -73,21 +74,11 @@ export function PurchaseActions({
           {pending ? "Adding…" : added ? "✓ Added to Cart" : "Add to Cart"}
         </button>
 
-        <button
-          type="button"
-          aria-label="Add to wishlist"
-          className="grid h-12 w-12 place-items-center rounded-full border-2 border-slate-200 text-slate-500 transition-all hover:border-red-300 hover:text-red-500"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="h-5 w-5"
-          >
-            <path d="M19 14c1.5-1.5 3-3.3 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3.4 1-4.5 2.5C10.9 4 9.3 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7z" />
-          </svg>
-        </button>
+        <WishlistButton
+          productId={productId}
+          iconClassName="h-5 w-5"
+          className="grid h-12 w-12 place-items-center rounded-full border-2 border-slate-200 text-slate-500 transition-all hover:border-red-300 hover:text-red-500 aria-[pressed=true]:border-red-300 aria-[pressed=true]:text-red-500"
+        />
       </div>
 
       <button

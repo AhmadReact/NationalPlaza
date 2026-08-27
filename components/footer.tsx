@@ -13,7 +13,8 @@ const columns = [
   {
     heading: "Customer Support",
     links: [
-      { label: "Contact Us", href: "#" },
+      { label: "My Account", href: "/account" },
+      { label: "Wishlist", href: "/account/wishlist" },
       { label: "Track Order", href: "/track-order" },
       { label: "FAQs", href: "#" },
       { label: "Customer Feedback", href: "#" },

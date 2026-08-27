@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getArtKindForSlug, fetchStoreCategoryTree } from "@/app/store/customerAPI";
+import { getArtKindForSlug } from "@/app/store/customerAPI";
+import { fetchStoreCategoryTree } from "@/app/store/storefrontServer";
 import { ApplianceArt } from "@/components/appliance-art";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";

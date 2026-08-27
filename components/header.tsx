@@ -1,7 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import Form from "next/form";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import {
+  accountApi,
+  unwrapAccountProducts,
+  useGetWishlistQuery,
+} from "@/app/store/accountAPI";
+import { cartApi } from "@/app/store/cartAPI";
 import { clearCartState, selectCartItemCount } from "@/app/store/cartSlice";
 import { getCustomerDisplayName } from "@/app/store/customerAuthAPI";
 import {
@@ -32,11 +40,17 @@ export function Header() {
   const isAuthenticated = useAppSelector(selectCustomerIsAuthenticated);
   const customerUser = useAppSelector(selectCustomerUser);
   const { data: treeData } = useGetStoreCategoryTreeQuery();
+  const { data: wishlistData } = useGetWishlistQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const wishlistCount = unwrapAccountProducts(wishlistData?.data).length;
 
   function handleLogout() {
     setMenuOpen(false);
     dispatch(customerLogout());
     dispatch(clearCartState());
+    dispatch(accountApi.util.resetApiState());
+    dispatch(cartApi.util.resetApiState());
     window.location.assign("/");
   }
 
@@ -100,25 +114,18 @@ export function Header() {
           </Link>
 
           <div className="hidden flex-1 items-center md:flex">
-            <div className="flex w-full max-w-xl items-center overflow-hidden rounded-full border-2 border-brand-900/15 bg-slate-50 transition-colors focus-within:border-brand-600">
-              <input
-                type="search"
-                placeholder="Search ACs, refrigerators, coolers, TVs…"
-                className="w-full bg-transparent px-5 py-2.5 text-sm outline-none placeholder:text-slate-400"
-              />
-              <button className="m-1 flex items-center gap-2 rounded-full bg-brand-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
-                <SearchIcon className="h-4 w-4" />
-                <span className="hidden lg:inline">Search</span>
-              </button>
-            </div>
+            <HeaderSearch />
           </div>
 
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             {isAuthenticated ? (
               <>
-                <span className="hidden max-w-36 truncate px-2 text-sm font-semibold text-brand-900 sm:inline">
+                <Link
+                  href="/account"
+                  className="hidden max-w-36 truncate rounded-full px-3 py-2 text-sm font-semibold text-brand-900 transition-colors hover:bg-brand-50 sm:inline"
+                >
                   {getCustomerDisplayName(customerUser)}
-                </span>
+                </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -129,15 +136,28 @@ export function Header() {
               </>
             ) : (
               <Link
-                href="/login"
+                href="/login?next=/account"
                 className="hidden rounded-full px-3 py-2 text-sm font-semibold text-brand-900 transition-colors hover:bg-brand-50 sm:inline"
               >
                 Sign in
               </Link>
             )}
-            <IconButton label="Wishlist">
+            <Link
+              href={
+                isAuthenticated
+                  ? "/account/wishlist"
+                  : "/login?next=/account/wishlist"
+              }
+              aria-label="Wishlist"
+              className="relative rounded-full p-2.5 text-brand-950 transition-colors hover:bg-brand-50"
+            >
               <HeartIcon className="h-5 w-5" />
-            </IconButton>
+              {wishlistCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 grid h-4.5 w-4.5 min-w-[18px] place-items-center rounded-full bg-gold-500 text-[10px] font-bold text-brand-950">
+                  {wishlistCount > 99 ? "99+" : wishlistCount}
+                </span>
+              )}
+            </Link>
             <Link
               href="/cart"
               aria-label="Cart"
@@ -151,6 +171,9 @@ export function Header() {
               )}
             </Link>
           </div>
+        </div>
+        <div className="mx-auto max-w-7xl px-4 pb-3 md:hidden">
+          <HeaderSearch />
         </div>
       </div>
 
@@ -170,16 +193,25 @@ export function Header() {
             ))}
             <li className="lg:hidden">
               {isAuthenticated ? (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="block w-full border-b-2 border-transparent px-4 py-3 text-left font-medium transition-colors hover:bg-brand-800 hover:text-gold-300"
-                >
-                  Log out
-                </button>
+                <>
+                  <Link
+                    href="/account"
+                    onClick={() => setMenuOpen(false)}
+                    className="block border-b-2 border-transparent px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300"
+                  >
+                    My account
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="block w-full border-b-2 border-transparent px-4 py-3 text-left font-medium transition-colors hover:bg-brand-800 hover:text-gold-300"
+                  >
+                    Log out
+                  </button>
+                </>
               ) : (
                 <Link
-                  href="/login"
+                  href="/login?next=/account"
                   onClick={() => setMenuOpen(false)}
                   className="block border-b-2 border-transparent px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300"
                 >
@@ -200,27 +232,48 @@ export function Header() {
   );
 }
 
-function IconButton({
-  children,
-  label,
-  badge,
-}: {
-  children: React.ReactNode;
-  label: string;
-  badge?: number;
-}) {
+function HeaderSearch() {
   return (
-    <button
-      aria-label={label}
-      className="relative rounded-full p-2.5 text-brand-950 transition-colors hover:bg-brand-50"
+    <Suspense fallback={<SearchFormMarkup />}>
+      <SearchForm />
+    </Suspense>
+  );
+}
+
+function SearchForm() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const defaultQuery =
+    pathname === "/search" ? searchParams.get("q")?.trim() ?? "" : "";
+
+  return <SearchFormMarkup defaultQuery={defaultQuery} />;
+}
+
+function SearchFormMarkup({ defaultQuery = "" }: { defaultQuery?: string }) {
+  return (
+    <Form
+      action="/search"
+      className="flex w-full max-w-xl items-center overflow-hidden rounded-full border-2 border-brand-900/15 bg-slate-50 transition-colors focus-within:border-brand-600"
     >
-      {children}
-      {badge !== undefined && (
-        <span className="absolute -right-0.5 -top-0.5 grid h-4.5 w-4.5 min-w-[18px] place-items-center rounded-full bg-gold-500 text-[10px] font-bold text-brand-950">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
-    </button>
+      <input
+        key={defaultQuery}
+        type="search"
+        name="q"
+        defaultValue={defaultQuery}
+        placeholder="Search ACs, refrigerators, coolers, TVs…"
+        aria-label="Search products"
+        enterKeyHint="search"
+        className="w-full bg-transparent px-5 py-2.5 text-sm outline-none placeholder:text-slate-400"
+      />
+      <button
+        type="submit"
+        aria-label="Search"
+        className="m-1 flex items-center gap-2 rounded-full bg-brand-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+      >
+        <SearchIcon className="h-4 w-4" />
+        <span className="hidden lg:inline">Search</span>
+      </button>
+    </Form>
   );
 }
 

@@ -9,7 +9,7 @@ import { Header } from "@/components/header";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 
 function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/cart";
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/account";
   return raw;
 }
 
@@ -54,7 +54,7 @@ export default function RegisterClient() {
             Create account
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Register to checkout. Your guest cart will merge into your account.
+            Create an account for checkout, wishlist, addresses, and saved preferences. Your guest cart will merge automatically.
           </p>
 
           <form

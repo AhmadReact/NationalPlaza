@@ -1,5 +1,4 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+import { clientApiUrl } from "@/lib/api/clientBase";
 
 export type CustomerUser = {
   id: string;
@@ -86,7 +85,7 @@ async function postAuth(
   path: string,
   body: Record<string, unknown>,
 ): Promise<CustomerAuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/api${path}`, {
+  const response = await fetch(clientApiUrl(path), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

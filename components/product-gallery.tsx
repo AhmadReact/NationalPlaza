@@ -60,24 +60,28 @@ export function ProductGallery({
   return (
     <div>
       <div
-        className={`relative grid h-80 sm:h-[440px] place-items-center overflow-hidden rounded-3xl border border-slate-200 shadow-sm ${
+        className={`relative aspect-square w-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm ${
           hasImages
-            ? `bg-gradient-to-br ${tint}`
+            ? "bg-white"
             : artViews[safeActive]?.bg
         }`}
       >
         {hasImages ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={images[safeActive]?.url}
-            alt={images[safeActive]?.alt || "Product image"}
-            className="h-full w-full object-contain p-6 transition-opacity duration-300"
-          />
+          <div className="absolute inset-6 sm:inset-10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={images[safeActive]?.url}
+              alt={images[safeActive]?.alt || "Product image"}
+              className="h-full w-full object-contain object-center"
+            />
+          </div>
         ) : (
-          <ApplianceArt
-            kind={kind}
-            className={`transition-all duration-500 ${artViews[safeActive].artClass}`}
-          />
+          <div className="grid h-full w-full place-items-center">
+            <ApplianceArt
+              kind={kind}
+              className={`transition-all duration-500 ${artViews[safeActive].artClass}`}
+            />
+          </div>
         )}
         <div className="absolute left-4 top-4 flex flex-col gap-2">
           {discount !== null && (

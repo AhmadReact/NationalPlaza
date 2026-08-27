@@ -16,6 +16,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { OrderStatusTimeline } from "@/components/order-timeline";
 import { OrderTrackingDetails } from "@/components/order-tracking";
+import { clientApiUrl } from "@/lib/api/clientBase";
 import { getFetchErrorMessage, isNotFoundError } from "@/lib/api/errorMessage";
 import { formatPrice } from "@/lib/data";
 import { maskEmail, resolveOrderNotifyEmail } from "@/lib/email";
@@ -29,9 +30,6 @@ import {
 import { maskPhone, resolveOrderNotifyPhone } from "@/lib/phone";
 import { toast } from "@/lib/store/snackbarSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export default function OrderClient({ id }: { id: string }) {
   const searchParams = useSearchParams();
@@ -98,7 +96,9 @@ export default function OrderClient({ id }: { id: string }) {
     if (!canDownloadInvoice || !accessToken || !order) return;
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/customer/orders/${encodeURIComponent(order.id)}/invoice`,
+        clientApiUrl(
+          `/customer/orders/${encodeURIComponent(order.id)}/invoice`,
+        ),
         {
           headers: {
             authorization: `Bearer ${accessToken}`,

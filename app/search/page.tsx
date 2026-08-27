@@ -1,40 +1,36 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { CollectionClient } from "@/app/categories/[slug]/collection-client";
-import { fetchStoreCategoryBySlug } from "@/app/store/storefrontServer";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { SearchResults } from "@/app/search/search-client";
 
 type PageProps = {
-  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ q?: string | string[]; page?: string | string[] }>;
 };
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const category = await fetchStoreCategoryBySlug(slug);
+function firstParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? "";
+  return value ?? "";
+}
 
-  if (!category) {
-    return { title: "Category Not Found — National Electronics" };
+export async function generateMetadata({
+  searchParams,
+}: PageProps): Promise<Metadata> {
+  const query = firstParam((await searchParams).q).trim();
+  if (!query) {
+    return { title: "Search — National Electronics" };
   }
 
   return {
-    title: `${category.name} — National Electronics`,
-    description:
-      category.description?.slice(0, 160) ||
-      `Shop ${category.name} at National Electronics with nationwide delivery.`,
+    title: `Search “${query}” — National Electronics`,
+    description: `Search results for ${query} at National Electronics.`,
   };
 }
 
-export default async function CategoryCollectionPage({ params }: PageProps) {
-  const { slug } = await params;
-  const category = await fetchStoreCategoryBySlug(slug);
-
-  if (!category) {
-    notFound();
-  }
+export default async function SearchPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const query = firstParam(params.q).trim();
+  const page = Math.max(1, Number(firstParam(params.page) || "1") || 1);
 
   return (
     <>
@@ -55,7 +51,7 @@ export default async function CategoryCollectionPage({ params }: PageProps) {
             </div>
           }
         >
-          <CollectionClient slug={slug} />
+          <SearchResults query={query} page={page} />
         </Suspense>
       </main>
       <Footer />

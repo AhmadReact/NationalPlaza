@@ -1,35 +1,9 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithInterceptor } from "@/lib/store/baseQuery";
 import type { OrderStatus } from "@/lib/order/status";
+import type { Address, CreateAddressInput } from "@/app/store/accountAPI";
 
-export type Address = {
-  id: string;
-  label: string | null;
-  fullName: string;
-  phone: string | null;
-  line1: string;
-  line2: string | null;
-  city: string;
-  state: string | null;
-  postalCode: string;
-  country: string;
-  isDefault: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type CreateAddressInput = {
-  fullName: string;
-  line1: string;
-  city: string;
-  postalCode: string;
-  label?: string;
-  phone?: string;
-  line2?: string;
-  state?: string;
-  country?: string;
-  isDefault?: boolean;
-};
+export type { Address, CreateAddressInput };
 
 export type DeliveryMethod = {
   id: string;
@@ -176,20 +150,8 @@ export type ApiListResponse<T> = {
 export const checkoutApi = createApi({
   reducerPath: "checkoutApi",
   baseQuery: baseQueryWithInterceptor,
-  tagTypes: ["Address", "DeliveryMethod", "Order"],
+  tagTypes: ["DeliveryMethod", "Order"],
   endpoints: (builder) => ({
-    getAddresses: builder.query<ApiListResponse<Address>, void>({
-      query: () => ({ url: "/customer/addresses", method: "GET" }),
-      providesTags: ["Address"],
-    }),
-    createAddress: builder.mutation<ApiResponse<Address>, CreateAddressInput>({
-      query: (body) => ({
-        url: "/customer/addresses",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Address"],
-    }),
     getDeliveryMethods: builder.query<ApiListResponse<DeliveryMethod>, void>({
       query: () => ({ url: "/delivery-methods", method: "GET" }),
       extraOptions: { skipErrorToast: true },
@@ -313,8 +275,6 @@ export const checkoutApi = createApi({
 });
 
 export const {
-  useGetAddressesQuery,
-  useCreateAddressMutation,
   useGetDeliveryMethodsQuery,
   useValidateCouponMutation,
   usePreviewCheckoutMutation,

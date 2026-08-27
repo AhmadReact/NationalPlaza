@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import {
   fetchRelatedStoreProducts,
   fetchStoreProduct,
+} from "@/app/store/storefrontServer";
+import {
   getProductGalleryImages,
   getProductPricing,
   getStoreProductArt,
@@ -20,6 +22,7 @@ import { ProductCard } from "@/components/product-card";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductBanners } from "@/components/storefront-banners";
 import { PurchaseActions } from "@/components/purchase-actions";
+import { TrackRecentlyViewed } from "@/components/track-recently-viewed";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -205,6 +208,7 @@ export default async function ProductPage({ params }: PageProps) {
             </div>
 
             <div className="mt-6">
+              <TrackRecentlyViewed productId={product.id} />
               <PurchaseActions
                 productId={product.id}
                 inStock={inStock}

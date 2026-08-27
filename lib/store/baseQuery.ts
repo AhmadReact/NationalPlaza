@@ -1,3 +1,4 @@
+import { CLIENT_API_BASE } from "@/lib/api/clientBase";
 import {
   fetchBaseQuery,
   type BaseQueryFn,
@@ -8,9 +9,6 @@ import { clearAdminSessionCookie } from "@/app/admin/actions";
 import { logout } from "@/app/admin/login/store/authSlice";
 import { getFetchErrorMessage } from "@/lib/api/errorMessage";
 import { toast } from "@/lib/store/snackbarSlice";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export type BaseQueryExtraOptions = {
   /** When true, interceptor will not show an error toast */
@@ -51,7 +49,7 @@ function withAuthHeader(
 }
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: `${API_BASE_URL}/api`,
+  baseUrl: CLIENT_API_BASE,
   prepareHeaders: (headers) => {
     headers.set("accept", "application/json");
     return headers;
