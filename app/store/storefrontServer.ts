@@ -11,19 +11,21 @@ import type {
 import { toCatalogQueryString } from "@/lib/catalog-query";
 import { getServerApiOrigin } from "@/lib/api/serverOrigin";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 async function fetchJson<T>(path: string): Promise<T | null> {
-  try {
-    const res = await fetch(`${getServerApiOrigin()}/api${path}`, {
-      headers: { accept: "application/json" },
-      next: { revalidate: 60 },
-    });
+  const res = await fetch(`${getServerApiOrigin()}/api${path}`, {
+    headers: { accept: "application/json" },
+    next: { revalidate: 60 },
+  });
 
-    if (!res.ok) return null;
-
-    return (await res.json()) as T;
-  } catch {
-    return null;
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`Store API ${res.status} for ${path}`);
   }
+
+  return (await res.json()) as T;
 }
 
 export async function fetchStoreProductBySlug(
@@ -44,12 +46,13 @@ export async function fetchStoreProductById(
   return json?.data ?? null;
 }
 
-/** Resolve a product by slug (preferred) or id. */
+/** Resolve a product by slug (preferred) or UUID. */
 export async function fetchStoreProduct(
   param: string,
 ): Promise<StoreProduct | null> {
   const bySlug = await fetchStoreProductBySlug(param);
   if (bySlug) return bySlug;
+  if (!UUID_RE.test(param)) return null;
   return fetchStoreProductById(param);
 }
 
