@@ -6,9 +6,10 @@ import {
 } from "@/components/policy-shell";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions — National Electronics",
+  title: "Terms & Conditions",
   description:
     "Terms of service for shopping with National Electronics online or in store, including orders, delivery, warranty, and payment security.",
+  alternates: { canonical: "/policies/terms-of-service" },
 };
 
 export default function TermsOfServicePage() {

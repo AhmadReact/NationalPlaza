@@ -7,9 +7,10 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
-  title: "Shop by Category — National Electronics",
+  title: "Shop by Category",
   description:
     "Browse air conditioners, refrigerators, TVs and every home appliance category at National Electronics.",
+  alternates: { canonical: "/categories" },
 };
 
 export default async function CategoriesIndexPage() {

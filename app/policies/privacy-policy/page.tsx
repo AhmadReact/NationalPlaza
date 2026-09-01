@@ -6,9 +6,10 @@ import {
 } from "@/components/policy-shell";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — National Electronics",
+  title: "Privacy Policy",
   description:
     "How National Electronics collects, uses, shares, and protects your information when you visit our website or shop with us in store.",
+  alternates: { canonical: "/policies/privacy-policy" },
 };
 
 export default function PrivacyPolicyPage() {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { noIndexFollowRobots } from "@/lib/seo";
 import { Suspense } from "react";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
@@ -18,12 +19,13 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const query = firstParam((await searchParams).q).trim();
   if (!query) {
-    return { title: "Search — National Electronics" };
+    return { title: "Search", robots: noIndexFollowRobots };
   }
 
   return {
-    title: `Search “${query}” — National Electronics`,
+    title: `Search “${query}”`,
     description: `Search results for ${query} at National Electronics.`,
+    robots: noIndexFollowRobots,
   };
 }
 

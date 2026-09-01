@@ -8,6 +8,11 @@ import { HomePromoBanners } from "@/components/storefront-banners";
 import { HomeProducts } from "@/components/home-products";
 import { Testimonials } from "@/components/testimonials";
 import { TrustStrip } from "@/components/trust-strip";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (

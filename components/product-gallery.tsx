@@ -23,12 +23,14 @@ export function ProductGallery({
   discount,
   badge,
   images = [],
+  productName,
 }: {
   kind: ArtKind;
   tint: string;
   discount: number | null;
   badge?: string;
   images?: GalleryImage[];
+  productName?: string;
 }) {
   const hasImages = images.length > 0;
 
@@ -71,7 +73,11 @@ export function ProductGallery({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={images[safeActive]?.url}
-              alt={images[safeActive]?.alt || "Product image"}
+              alt={
+                images[safeActive]?.alt ||
+                productName ||
+                "Product image"
+              }
               className="h-full w-full object-contain object-center"
             />
           </div>
@@ -113,7 +119,7 @@ export function ProductGallery({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={image.url}
-                  alt={image.alt || ""}
+                  alt={image.alt || productName || `Image ${i + 1}`}
                   className="h-full w-full object-contain p-1.5"
                 />
               </button>

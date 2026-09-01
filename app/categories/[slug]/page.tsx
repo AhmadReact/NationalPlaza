@@ -5,6 +5,13 @@ import { CollectionClient } from "@/app/categories/[slug]/collection-client";
 import { fetchStoreCategoryBySlug } from "@/app/store/storefrontServer";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { JsonLd } from "@/components/json-ld";
+import {
+  buildBreadcrumbJsonLd,
+  getSiteUrl,
+  noIndexRobots,
+  truncateText,
+} from "@/lib/seo";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -17,14 +24,37 @@ export async function generateMetadata({
   const category = await fetchStoreCategoryBySlug(slug);
 
   if (!category) {
-    return { title: "Category Not Found — National Electronics" };
+    return {
+      title: "Category Not Found",
+      robots: noIndexRobots,
+    };
   }
 
+  const description = truncateText(
+    category.description ||
+      `Shop ${category.name} at National Electronics. Genuine branded products, nationwide delivery, cash on delivery, and official warranty.`,
+    160,
+  );
+  const canonical = `/categories/${category.slug}`;
+
   return {
-    title: `${category.name} — National Electronics`,
-    description:
-      category.description?.slice(0, 160) ||
-      `Shop ${category.name} at National Electronics with nationwide delivery.`,
+    title: `${category.name} in Pakistan`,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title: `${category.name} in Pakistan`,
+      description,
+      url: canonical,
+      images: category.image
+        ? [{ url: category.image, alt: category.name }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${category.name} in Pakistan`,
+      description,
+    },
   };
 }
 
@@ -36,8 +66,17 @@ export default async function CategoryCollectionPage({ params }: PageProps) {
     notFound();
   }
 
+  const origin = getSiteUrl();
+
   return (
     <>
+      <JsonLd
+        data={buildBreadcrumbJsonLd(origin, [
+          { name: "Home", path: "/" },
+          { name: "Categories", path: "/categories" },
+          { name: category.name, path: `/categories/${category.slug}` },
+        ])}
+      />
       <Header />
       <main className="flex-1">
         <Suspense

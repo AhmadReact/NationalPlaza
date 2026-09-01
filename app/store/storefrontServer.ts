@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type {
   Category,
   CategoryTreeNode,
@@ -46,30 +47,72 @@ export async function fetchStoreProductById(
   return json?.data ?? null;
 }
 
+export function isProductUuid(param: string): boolean {
+  return UUID_RE.test(param);
+}
+
 /** Resolve a product by slug (preferred) or UUID. */
-export async function fetchStoreProduct(
-  param: string,
-): Promise<StoreProduct | null> {
-  const bySlug = await fetchStoreProductBySlug(param);
-  if (bySlug) return bySlug;
-  if (!UUID_RE.test(param)) return null;
-  return fetchStoreProductById(param);
+export const fetchStoreProduct = cache(
+  async (param: string): Promise<StoreProduct | null> => {
+    const bySlug = await fetchStoreProductBySlug(param);
+    if (bySlug) return bySlug;
+    if (!UUID_RE.test(param)) return null;
+    return fetchStoreProductById(param);
+  },
+);
+
+export const fetchStoreCategoryBySlug = cache(
+  async (slug: string): Promise<Category | null> => {
+    const json = await fetchJson<ApiMutationResponse<Category>>(
+      `/categories/slug/${encodeURIComponent(slug)}`,
+    );
+    return json?.data ?? null;
+  },
+);
+
+export const fetchStoreCategoryTree = cache(
+  async (): Promise<CategoryTreeNode[]> => {
+    const json = await fetchJson<ApiMutationResponse<CategoryTreeNode[]>>(
+      "/categories/tree",
+    );
+    return json?.data ?? [];
+  },
+);
+
+export function flattenCategoryTree(
+  nodes: CategoryTreeNode[],
+): CategoryTreeNode[] {
+  const result: CategoryTreeNode[] = [];
+  const walk = (list: CategoryTreeNode[]) => {
+    for (const node of list) {
+      if (node.isActive === false) continue;
+      result.push(node);
+      if (node.children?.length) walk(node.children);
+    }
+  };
+  walk(nodes);
+  return result;
 }
 
-export async function fetchStoreCategoryBySlug(
-  slug: string,
-): Promise<Category | null> {
-  const json = await fetchJson<ApiMutationResponse<Category>>(
-    `/categories/slug/${encodeURIComponent(slug)}`,
+export async function fetchAllActiveStoreProducts(): Promise<StoreProduct[]> {
+  const limit = 100;
+  const first = await fetchJson<ApiListResponse<StoreProduct>>(
+    `/products${toCatalogQueryString({ page: 1, limit, status: "ACTIVE" })}`,
   );
-  return json?.data ?? null;
-}
 
-export async function fetchStoreCategoryTree(): Promise<CategoryTreeNode[]> {
-  const json = await fetchJson<ApiMutationResponse<CategoryTreeNode[]>>(
-    "/categories/tree",
-  );
-  return json?.data ?? [];
+  if (!first?.data) return [];
+
+  const products = [...first.data];
+  const totalPages = Math.min(first.meta?.totalPages ?? 1, 50);
+
+  for (let page = 2; page <= totalPages; page++) {
+    const next = await fetchJson<ApiListResponse<StoreProduct>>(
+      `/products${toCatalogQueryString({ page, limit, status: "ACTIVE" })}`,
+    );
+    if (next?.data?.length) products.push(...next.data);
+  }
+
+  return products.filter((product) => product.status === "ACTIVE");
 }
 
 export async function fetchRelatedStoreProducts(

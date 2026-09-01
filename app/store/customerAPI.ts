@@ -52,6 +52,8 @@ export type StoreProduct = {
   images: StoreProductImage[];
   thumbnail: StoreProductImage | null;
   specifications?: StoreProductSpecification[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type StoreProductListParams = CatalogApiParams;

@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import RegisterClient from "./register-client";
+import { noIndexRobots } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Create Account",
+  robots: noIndexRobots,
+};
 
 export default function RegisterPage() {
   return (

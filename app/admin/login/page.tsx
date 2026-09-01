@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { AdminLoginForm } from "@/components/admin/login-form";
+import { noIndexRobots } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Admin Login — National Electronics",
+  title: "Admin Login",
+  robots: noIndexRobots,
 };
 
 export default function AdminLoginPage() {

@@ -6,9 +6,10 @@ import {
 } from "@/components/policy-shell";
 
 export const metadata: Metadata = {
-  title: "Return & Refund Policy — National Electronics",
+  title: "Return & Refund Policy",
   description:
     "Exchange and return conditions for products purchased from National Electronics, including invoice, packing, and time-limit rules.",
+  alternates: { canonical: "/policies/refund-policy" },
 };
 
 export default function RefundPolicyPage() {

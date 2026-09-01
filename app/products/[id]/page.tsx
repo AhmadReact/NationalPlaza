@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import {
   fetchRelatedStoreProducts,
   fetchStoreProduct,
+  isProductUuid,
 } from "@/app/store/storefrontServer";
 import {
   getProductGalleryImages,
@@ -22,7 +23,16 @@ import { ProductCard } from "@/components/product-card";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductBanners } from "@/components/storefront-banners";
 import { PurchaseActions } from "@/components/purchase-actions";
+import { JsonLd } from "@/components/json-ld";
 import { TrackRecentlyViewed } from "@/components/track-recently-viewed";
+import {
+  buildBreadcrumbJsonLd,
+  buildProductJsonLd,
+  getSiteUrl,
+  noIndexRobots,
+  productCanonicalPath,
+  productMetaDescription,
+} from "@/lib/seo";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -67,15 +77,39 @@ export async function generateMetadata({
   const { id } = await params;
   const product = await fetchStoreProduct(id);
 
-  if (!product) {
-    return { title: "Product Not Found — National Electronics" };
+  if (!product || product.status === "INACTIVE") {
+    return {
+      title: "Product Not Found",
+      robots: noIndexRobots,
+    };
   }
 
+  const description = productMetaDescription(product);
+  const canonical = productCanonicalPath(product);
+  const image =
+    product.thumbnail?.url ??
+    product.images?.[0]?.url ??
+    undefined;
+
   return {
-    title: `${product.name} — National Electronics`,
-    description:
-      product.description?.slice(0, 160) ||
-      `Buy ${product.name} at the best price in Pakistan with nationwide delivery from National Electronics, trusted since 1946.`,
+    title: product.name,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title: product.name,
+      description,
+      url: canonical,
+      images: image
+        ? [{ url: image, alt: product.thumbnail?.alt || product.name }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.name,
+      description,
+      images: image ? [image] : undefined,
+    },
   };
 }
 
@@ -87,6 +121,14 @@ export default async function ProductPage({ params }: PageProps) {
     notFound();
   }
 
+  if (isProductUuid(id) && product.slug && product.slug !== id) {
+    permanentRedirect(`/products/${product.slug}`);
+  }
+
+  const origin = getSiteUrl();
+  const categoryPath = product.category?.slug
+    ? `/categories/${product.category.slug}`
+    : "/categories";
   const categoryId = product.category?.slug || product.category?.id || "";
   const categoryName = product.category?.name || "Products";
   const { price, oldPrice, discount } = getProductPricing(product);
@@ -108,6 +150,14 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <>
+      <JsonLd data={buildProductJsonLd(origin, product)} />
+      <JsonLd
+        data={buildBreadcrumbJsonLd(origin, [
+          { name: "Home", path: "/" },
+          { name: categoryName, path: categoryPath },
+          { name: product.name, path: productCanonicalPath(product) },
+        ])}
+      />
       <Header />
       <main className="flex-1">
         <div className="border-b border-slate-200 bg-white">
@@ -140,6 +190,7 @@ export default async function ProductPage({ params }: PageProps) {
             discount={discount}
             badge={product.isFeatured ? "Featured" : undefined}
             images={galleryImages}
+            productName={product.name}
           />
 
           <div>

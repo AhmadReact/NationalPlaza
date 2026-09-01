@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { ReduxProvider } from "@/lib/store/provider";
+import { noIndexRobots } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Admin — National Electronics",
+  title: "Admin",
   description: "National Electronics store administration",
+  robots: noIndexRobots,
 };
 
 export default function AdminRootLayout({

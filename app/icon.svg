@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="National Electronics">
+  <rect width="32" height="32" rx="8" fill="#0e1650"/>
+  <path
+    fill="#fbbf24"
+    d="M8.2 24V8h4.1l7.4 10.6V8H24v16h-4.1L12.5 13.4V24H8.2z"
+  />
+</svg>
