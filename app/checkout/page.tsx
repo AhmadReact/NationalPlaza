@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -49,6 +49,11 @@ import {
   checkoutShippingCopy,
   formatDeliveryEta,
 } from "@/lib/order/status";
+import {
+  filledButInvalid,
+  filledButTooShort,
+  getCheckoutBlockers,
+} from "@/app/checkout/checkout-requirements";
 
 const emptyShipping: GuestCheckoutAddressInput = {
   fullName: "",
@@ -66,15 +71,49 @@ function isGuestAddressReady(address: GuestCheckoutAddressInput): boolean {
     address.fullName.trim().length >= 2 &&
       address.line1.trim().length >= 2 &&
       address.city.trim().length >= 2 &&
-      address.postalCode.trim().length >= 2 &&
       isValidCheckoutPhone(address.phone ?? ""),
   );
 }
 
-function PhoneHint() {
+function PhoneHint({ id }: { id?: string }) {
   return (
-    <span className="mt-1 block text-xs text-slate-500">
+    <span id={id} className="mt-1 block text-xs text-slate-500">
       {CHECKOUT_PHONE_HELPER} Use 03XXXXXXXXX, +92…, or 92….
+    </span>
+  );
+}
+
+function FieldLabel({
+  required,
+  children,
+}: {
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+      {children}
+      {required ? (
+        <>
+          <span className="ml-1 text-red-600" aria-hidden="true">
+            *
+          </span>
+          <span className="sr-only"> (required)</span>
+        </>
+      ) : (
+        <span className="ml-1 font-medium normal-case tracking-normal text-slate-400">
+          (optional)
+        </span>
+      )}
+    </span>
+  );
+}
+
+function FieldError({ id, children }: { id: string; children?: string | null }) {
+  if (!children) return null;
+  return (
+    <span id={id} className="mt-1 block text-xs font-semibold text-red-600">
+      {children}
     </span>
   );
 }
@@ -286,6 +325,40 @@ export default function CheckoutPage() {
   const selectedAddress = addresses.find((a) => a.id === shippingAddressId);
   const selectedAddressPhoneOk = Boolean(
     selectedAddress && isValidCheckoutPhone(selectedAddress.phone ?? ""),
+  );
+
+  const checkoutBlockers = useMemo(
+    () =>
+      getCheckoutBlockers({
+        isAuthenticated,
+        guestEmail,
+        guestPhone,
+        guestShipping,
+        deliveryMethodId,
+        shippingAddressId,
+        hasAddresses: addresses.length > 0,
+        selectedAddressPhoneOk,
+        hasGuestToken: Boolean(getGuestToken()),
+      }),
+    [
+      isAuthenticated,
+      guestEmail,
+      guestPhone,
+      guestShipping,
+      deliveryMethodId,
+      shippingAddressId,
+      addresses.length,
+      selectedAddressPhoneOk,
+    ],
+  );
+
+  const canPlaceOrder = Boolean(
+    preview &&
+      !placing &&
+      !sendingOtp &&
+      !otpOpen &&
+      !previewError &&
+      checkoutBlockers.length === 0,
   );
 
   const onCreateAddress = async (event: FormEvent) => {
@@ -576,7 +649,11 @@ export default function CheckoutPage() {
               <p className="mt-1 text-sm text-slate-500">
                 {isAuthenticated
                   ? "Confirm address, delivery, and place your order."
-                  : "Checkout as a guest — no account required."}
+                  : "Checkout as a guest — no account required."}{" "}
+                <span className="text-slate-400">
+                  Required fields are marked with{" "}
+                  <span className="font-semibold text-red-600">*</span>.
+                </span>
               </p>
             </div>
             {!isAuthenticated && (
@@ -601,33 +678,58 @@ export default function CheckoutPage() {
                   <h2 className="font-display text-lg font-extrabold text-brand-950">
                     Contact
                   </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    We need both of these to send your confirmation and WhatsApp
+                    updates.
+                  </p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <label className="block sm:col-span-2">
-                      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                        Email
-                      </span>
+                      <FieldLabel required>Email</FieldLabel>
                       <input
+                        id="checkout-email"
                         type="email"
                         required
                         autoComplete="email"
                         value={guestEmail}
+                        aria-invalid={filledButInvalid(guestEmail, isValidEmail)}
+                        aria-describedby={
+                          filledButInvalid(guestEmail, isValidEmail)
+                            ? "checkout-email-error checkout-email-hint"
+                            : "checkout-email-hint"
+                        }
                         onChange={(e) => setGuestEmail(e.target.value)}
-                        className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                        className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600 aria-invalid:border-red-400"
                       />
-                      <span className="mt-1 block text-xs text-slate-500">
+                      <span
+                        id="checkout-email-hint"
+                        className="mt-1 block text-xs text-slate-500"
+                      >
                         {CHECKOUT_EMAIL_HELPER}
                       </span>
+                      <FieldError id="checkout-email-error">
+                        {filledButInvalid(guestEmail, isValidEmail)
+                          ? "Enter a valid email, like name@example.com."
+                          : null}
+                      </FieldError>
                     </label>
                     <label className="block sm:col-span-2">
-                      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                        {CHECKOUT_PHONE_LABEL}
-                      </span>
+                      <FieldLabel required>{CHECKOUT_PHONE_LABEL}</FieldLabel>
                       <input
+                        id="checkout-phone"
                         type="tel"
                         required
                         inputMode="tel"
                         autoComplete="tel"
                         value={guestPhone}
+                        aria-invalid={filledButInvalid(
+                          guestPhone,
+                          isValidCheckoutPhone,
+                        )}
+                        aria-describedby={
+                          filledButInvalid(guestPhone, isValidCheckoutPhone)
+                            ? "checkout-phone-error checkout-phone-hint"
+                            : "checkout-phone-hint"
+                        }
                         onChange={(e) => {
                           const value = e.target.value;
                           setGuestPhone(value);
@@ -637,9 +739,14 @@ export default function CheckoutPage() {
                               : prev,
                           );
                         }}
-                        className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                        className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600 aria-invalid:border-red-400"
                       />
-                      <PhoneHint />
+                      <PhoneHint id="checkout-phone-hint" />
+                      <FieldError id="checkout-phone-error">
+                        {filledButInvalid(guestPhone, isValidCheckoutPhone)
+                          ? "Use 03XXXXXXXXX, +92…, or 92…."
+                          : null}
+                      </FieldError>
                     </label>
                   </div>
                 </section>
@@ -649,6 +756,14 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="font-display text-lg font-extrabold text-brand-950">
                     Shipping address
+                    {!isAuthenticated ? (
+                      <>
+                        <span className="ml-1 text-red-600" aria-hidden="true">
+                          *
+                        </span>
+                        <span className="sr-only"> (required)</span>
+                      </>
+                    ) : null}
                   </h2>
                   {isAuthenticated && addresses.length > 0 && (
                     <button
@@ -712,34 +827,58 @@ export default function CheckoutPage() {
                       >
                         {(
                           [
-                            ["fullName", "Full name"],
-                            ["line1", "Address line 1"],
-                            ["city", "City"],
-                            ["postalCode", "Postal code"],
-                            ["phone", CHECKOUT_PHONE_LABEL],
+                            ["fullName", "Full name", true],
+                            ["line1", "Address line 1", true],
+                            ["city", "City", true],
+                            ["postalCode", "Postal code", false],
+                            ["phone", CHECKOUT_PHONE_LABEL, true],
                           ] as const
-                        ).map(([key, label]) => (
+                        ).map(([key, label, required]) => (
                           <label key={key} className="block">
-                            <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                              {label}
-                            </span>
+                            <FieldLabel required={required}>{label}</FieldLabel>
                             <input
-                              required
+                              required={required}
+                              minLength={
+                                required && key !== "phone" ? 2 : undefined
+                              }
                               type={key === "phone" ? "tel" : "text"}
                               inputMode={key === "phone" ? "tel" : undefined}
                               autoComplete={
                                 key === "phone" ? "tel" : undefined
                               }
                               value={addressForm[key] ?? ""}
+                              aria-invalid={
+                                key === "phone"
+                                  ? filledButInvalid(
+                                      addressForm.phone ?? "",
+                                      isValidCheckoutPhone,
+                                    )
+                                  : required
+                                    ? filledButTooShort(addressForm[key] ?? "")
+                                    : false
+                              }
                               onChange={(e) =>
                                 setAddressForm((prev) => ({
                                   ...prev,
                                   [key]: e.target.value,
                                 }))
                               }
-                              className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                              className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600 aria-invalid:border-red-400"
                             />
                             {key === "phone" ? <PhoneHint /> : null}
+                            <FieldError id={`address-${key}-error`}>
+                              {key === "phone"
+                                ? filledButInvalid(
+                                    addressForm.phone ?? "",
+                                    isValidCheckoutPhone,
+                                  )
+                                  ? "Use 03XXXXXXXXX, +92…, or 92…."
+                                  : null
+                                : required &&
+                                    filledButTooShort(addressForm[key] ?? "")
+                                  ? "Enter at least 2 characters."
+                                  : null}
+                            </FieldError>
                           </label>
                         ))}
                         <button
@@ -762,47 +901,73 @@ export default function CheckoutPage() {
                         ["line2", "Address line 2", false],
                         ["city", "City", true],
                         ["state", "State / province", false],
-                        ["postalCode", "Postal code", true],
+                        ["postalCode", "Postal code", false],
                         ["country", "Country (ISO)", false],
                       ] as const
-                    ).map(([key, label, required]) => (
+                    ).map(([key, label, required]) => {
+                      const value = guestShipping[key] ?? "";
+                      const invalid =
+                        key === "phone"
+                          ? filledButInvalid(value, isValidCheckoutPhone)
+                          : required
+                            ? filledButTooShort(value)
+                            : false;
+                      const errorId = `guest-${key}-error`;
+                      const hintId =
+                        key === "phone" ? "guest-phone-hint" : undefined;
+                      return (
                       <label
                         key={key}
                         className={`block ${key === "line1" || key === "line2" || key === "fullName" || key === "phone" ? "sm:col-span-2" : ""}`}
                       >
-                        <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                          {label}
-                        </span>
+                        <FieldLabel required={required}>{label}</FieldLabel>
                         <input
                           required={required}
+                          minLength={required && key !== "phone" ? 2 : undefined}
                           type={key === "phone" ? "tel" : "text"}
                           inputMode={key === "phone" ? "tel" : undefined}
                           autoComplete={key === "phone" ? "tel" : undefined}
-                          value={guestShipping[key] ?? ""}
+                          value={value}
+                          aria-invalid={invalid}
+                          aria-describedby={
+                            [invalid ? errorId : null, hintId]
+                              .filter(Boolean)
+                              .join(" ") || undefined
+                          }
                           onChange={(e) => {
-                            const value = e.target.value;
+                            const next = e.target.value;
                             if (key === "phone") {
                               setGuestShipping((prev) => ({
                                 ...prev,
-                                phone: value,
+                                phone: next,
                               }));
                               setGuestPhone((prev) =>
                                 !prev || prev === guestShipping.phone
-                                  ? value
+                                  ? next
                                   : prev,
                               );
                               return;
                             }
                             setGuestShipping((prev) => ({
                               ...prev,
-                              [key]: value,
+                              [key]: next,
                             }));
                           }}
-                          className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                          className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600 aria-invalid:border-red-400"
                         />
-                        {key === "phone" ? <PhoneHint /> : null}
+                        {key === "phone" ? (
+                          <PhoneHint id="guest-phone-hint" />
+                        ) : null}
+                        <FieldError id={errorId}>
+                          {key === "phone" && invalid
+                            ? "Use 03XXXXXXXXX, +92…, or 92…."
+                            : invalid
+                              ? "Enter at least 2 characters."
+                              : null}
+                        </FieldError>
                       </label>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </section>
@@ -810,7 +975,17 @@ export default function CheckoutPage() {
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="font-display text-lg font-extrabold text-brand-950">
                   Delivery method
+                  <span className="ml-1 text-red-600" aria-hidden="true">
+                    *
+                  </span>
+                  <span className="sr-only"> (required)</span>
                 </h2>
+                {deliveryMethods.length === 0 ? (
+                  <p className="mt-4 text-sm text-amber-800">
+                    No delivery methods are available right now. Please try again
+                    later.
+                  </p>
+                ) : null}
                 <ul className="mt-4 space-y-3">
                   {deliveryMethods.map((method) => {
                     const eta = formatDeliveryEta(
@@ -855,13 +1030,19 @@ export default function CheckoutPage() {
                 <h2 className="font-display text-lg font-extrabold text-brand-950">
                   Coupon & notes
                 </h2>
-                <div className="mt-4 flex gap-2">
-                  <input
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder="Coupon code"
-                    className="flex-1 rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
-                  />
+                <p className="mt-1 text-sm text-slate-500">
+                  Both of these are optional.
+                </p>
+                <div className="mt-4 flex items-end gap-2">
+                  <label className="flex-1">
+                    <FieldLabel>Coupon code</FieldLabel>
+                    <input
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="If you have one"
+                      className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+                    />
+                  </label>
                   <button
                     type="button"
                     onClick={() => void onApplyCoupon()}
@@ -883,9 +1064,7 @@ export default function CheckoutPage() {
                   </button>
                 )}
                 <label className="mt-4 block">
-                  <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                    Order notes
-                  </span>
+                  <FieldLabel>Order notes</FieldLabel>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -983,9 +1162,9 @@ export default function CheckoutPage() {
                 ) : (
                   !previewError && (
                     <p className="pt-1 text-xs text-slate-400">
-                      {isAuthenticated
-                        ? "Select address and delivery to see tax and totals."
-                        : "Enter email, shipping, and delivery to see tax and totals."}
+                      {checkoutBlockers.length > 0
+                        ? `Complete ${checkoutBlockers.length === 1 ? "this required field" : "these required fields"} to see tax and totals.`
+                        : "Totals will appear once the form is complete."}
                     </p>
                   )
                 )}
@@ -993,13 +1172,11 @@ export default function CheckoutPage() {
 
               <button
                 type="button"
-                disabled={
-                  !preview ||
-                  placing ||
-                  sendingOtp ||
-                  otpOpen ||
-                  !!previewError ||
-                  (isAuthenticated && !selectedAddressPhoneOk)
+                disabled={!canPlaceOrder}
+                aria-describedby={
+                  !canPlaceOrder && !otpOpen && !sendingOtp && !placing
+                    ? "checkout-requirements"
+                    : undefined
                 }
                 onClick={() => void onPlaceOrder()}
                 className="mt-6 w-full rounded-full bg-gold-400 py-3 text-sm font-bold text-brand-950 shadow-lg shadow-gold-500/25 transition-all hover:bg-gold-300 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1010,12 +1187,32 @@ export default function CheckoutPage() {
                     ? "Placing order…"
                     : "Place order"}
               </button>
-              {isAuthenticated &&
-              shippingAddressId &&
-              !selectedAddressPhoneOk ? (
-                <p className="mt-2 text-center text-xs text-amber-700">
-                  The selected address needs a WhatsApp / mobile number.
-                </p>
+              {!canPlaceOrder && !otpOpen && !sendingOtp && !placing ? (
+                <div
+                  id="checkout-requirements"
+                  role="status"
+                  aria-live="polite"
+                  className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950"
+                >
+                  {previewLoading && checkoutBlockers.length === 0 ? (
+                    <p>Calculating totals… Place order will enable in a moment.</p>
+                  ) : checkoutBlockers.length > 0 ? (
+                    <>
+                      <p className="font-semibold">
+                        Place order stays disabled until you add:
+                      </p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                        {checkoutBlockers.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : previewError ? (
+                    <p>{previewError}</p>
+                  ) : (
+                    <p>Place order enables after totals load.</p>
+                  )}
+                </div>
               ) : null}
               <Link
                 href="/cart"

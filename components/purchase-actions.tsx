@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { addToCart } from "@/app/store/cartThunk";
 import { WishlistButton } from "@/components/wishlist-button";
 import { useAppDispatch } from "@/lib/store/hooks";
@@ -15,16 +16,19 @@ export function PurchaseActions({
   maxQuantity?: number;
 }) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"add" | "buy" | null>(null);
   const [added, setAdded] = useState(false);
 
   const qtyCap = Math.max(1, Math.min(999, maxQuantity));
+  const busy = pending !== null;
+  const canPurchase = Boolean(productId && inStock && !busy);
 
   const handleAdd = async () => {
-    if (!productId || !inStock || pending) return;
+    if (!canPurchase) return;
 
-    setPending(true);
+    setPending("add");
     try {
       await dispatch(addToCart({ productId, quantity })).unwrap();
       setAdded(true);
@@ -32,7 +36,21 @@ export function PurchaseActions({
     } catch {
       // toast handled in thunk
     } finally {
-      setPending(false);
+      setPending(null);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!canPurchase) return;
+
+    setPending("buy");
+    try {
+      await dispatch(
+        addToCart({ productId, quantity, silentSuccess: true }),
+      ).unwrap();
+      router.push("/checkout");
+    } catch {
+      setPending(null);
     }
   };
 
@@ -64,14 +82,18 @@ export function PurchaseActions({
         <button
           type="button"
           onClick={handleAdd}
-          disabled={!inStock || pending || !productId}
+          disabled={!canPurchase}
           className={`min-w-40 flex-1 rounded-full px-7 py-3 text-sm font-bold text-white shadow-lg transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${
             added
               ? "bg-emerald-600 shadow-emerald-600/25"
               : "bg-brand-900 shadow-brand-900/25 hover:bg-brand-700"
           }`}
         >
-          {pending ? "Adding…" : added ? "✓ Added to Cart" : "Add to Cart"}
+          {pending === "add"
+            ? "Adding…"
+            : added
+              ? "✓ Added to Cart"
+              : "Add to Cart"}
         </button>
 
         <WishlistButton
@@ -83,9 +105,11 @@ export function PurchaseActions({
 
       <button
         type="button"
-        className="mt-3 w-full rounded-full bg-gold-400 px-7 py-3 text-sm font-bold text-brand-950 shadow-lg shadow-gold-500/25 transition-all hover:-translate-y-0.5 hover:bg-gold-300"
+        onClick={handleBuyNow}
+        disabled={!canPurchase}
+        className="mt-3 w-full rounded-full bg-gold-400 px-7 py-3 text-sm font-bold text-brand-950 shadow-lg shadow-gold-500/25 transition-all hover:-translate-y-0.5 hover:bg-gold-300 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
       >
-        Buy It Now
+        {pending === "buy" ? "Taking you to checkout…" : "Buy It Now"}
       </button>
 
       <a
