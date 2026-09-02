@@ -63,12 +63,7 @@ function buildDetailContent(product: StoreProduct) {
         ]
       : fallback.specs;
 
-  const features =
-    specsFromApi.length > 0
-      ? specsFromApi.slice(0, 6).map(([name, value]) => `${name}: ${value}`)
-      : fallback.features;
-
-  return { intro, features, specs };
+  return { intro, specs };
 }
 
 export async function generateMetadata({
@@ -303,11 +298,7 @@ export default async function ProductPage({ params }: PageProps) {
         </div>
 
         <div className="mx-auto max-w-7xl px-4 pb-4">
-          <DetailTabs
-            intro={detail.intro}
-            features={detail.features}
-            specs={detail.specs}
-          />
+          <DetailTabs intro={detail.intro} specs={detail.specs} />
         </div>
 
         {related.length > 0 && (

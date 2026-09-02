@@ -12,11 +12,9 @@ const whyChooseUs = [
 
 export function DetailTabs({
   intro,
-  features,
   specs,
 }: {
   intro: string[];
-  features: string[];
   specs: [string, string][];
 }) {
   const tabs = ["Description", "Specifications", "Why Choose Us"];
@@ -45,31 +43,12 @@ export function DetailTabs({
 
       <div className="p-6 sm:p-8">
         {active === 0 && (
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div className="space-y-4">
-              {intro.map((paragraph) => (
-                <p key={paragraph.slice(0, 24)} className="text-sm leading-relaxed text-slate-600">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-widest text-brand-900">
-                Key Features
-              </h3>
-              <ul className="mt-4 space-y-3">
-                {features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3 text-sm text-slate-600">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gold-100 text-gold-700">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-3 w-3">
-                        <path d="m5 13 4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="max-w-3xl space-y-4">
+            {intro.map((paragraph) => (
+              <p key={paragraph.slice(0, 24)} className="text-sm leading-relaxed text-slate-600">
+                {paragraph}
+              </p>
+            ))}
           </div>
         )}
 
