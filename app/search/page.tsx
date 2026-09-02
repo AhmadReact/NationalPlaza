@@ -6,7 +6,7 @@ import { Header } from "@/components/header";
 import { SearchResults } from "@/app/search/search-client";
 
 type PageProps = {
-  searchParams: Promise<{ q?: string | string[]; page?: string | string[] }>;
+  searchParams: Promise<{ q?: string | string[] }>;
 };
 
 function firstParam(value: string | string[] | undefined): string {
@@ -32,7 +32,6 @@ export async function generateMetadata({
 export default async function SearchPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const query = firstParam(params.q).trim();
-  const page = Math.max(1, Number(firstParam(params.page) || "1") || 1);
 
   return (
     <>
@@ -53,7 +52,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </div>
           }
         >
-          <SearchResults query={query} page={page} />
+          <SearchResults query={query} />
         </Suspense>
       </main>
       <Footer />

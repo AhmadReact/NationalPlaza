@@ -9,16 +9,19 @@ import type {
 } from "@/app/admin/(panel)/categories/store/categoryAPI";
 import {
   resolveCategoryFiltersId,
-  toCardProduct,
   useGetStoreCategoryBySlugQuery,
   useGetStoreCategoryFiltersQuery,
-  useGetStoreProductsQuery,
   type PaginationMeta,
   type StoreProduct,
 } from "@/app/store/customerAPI";
 import { CollectionFilters } from "@/components/collection-filters";
 import { CategoryBanners } from "@/components/storefront-banners";
-import { ProductCard, ProductCardSkeleton } from "@/components/product-card";
+import { ProductCardSkeleton } from "@/components/product-card";
+import {
+  InfiniteProductGrid,
+  InfiniteScrollSentinel,
+  useInfiniteStoreProducts,
+} from "@/components/infinite-products";
 import { getFetchErrorMessage } from "@/lib/api/errorMessage";
 import {
   catalogStateToApiParams,
@@ -74,7 +77,11 @@ function CollectionView({
   const router = useRouter();
   const pathname = usePathname();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const useServerSnapshot = catalogStatesEqual(state, initialState);
+  const filterState = { ...state, page: 1 };
+  const useServerSnapshot = catalogStatesEqual(filterState, {
+    ...initialState,
+    page: 1,
+  });
 
   const {
     data: categoryResult,
@@ -88,7 +95,6 @@ function CollectionView({
 
   const {
     data: filtersResult,
-    isFetching: filtersFetching,
   } = useGetStoreCategoryFiltersQuery(
     {
       slug,
@@ -105,24 +111,30 @@ function CollectionView({
   const categoryId = resolveCategoryFiltersId(filtersData) ?? category?.id;
 
   const {
-    data: productsResult,
+    cards,
+    meta,
+    hasMore,
+    loadingMore,
+    loadError,
+    loadMore,
     isLoading: productsLoading,
     isFetching: productsFetching,
     isError: productsError,
     error: productsErr,
-  } = useGetStoreProductsQuery(
-    {
-      ...catalogStateToApiParams(state, {
-        categoryId,
-        status: "ACTIVE",
-        limit: COLLECTION_PAGE_SIZE,
-      }),
-    },
-    { skip: !categoryId },
-  );
+  } = useInfiniteStoreProducts({
+    params: catalogStateToApiParams(filterState, {
+      categoryId,
+      status: "ACTIVE",
+      limit: COLLECTION_PAGE_SIZE,
+    }),
+    skip: !categoryId,
+    initialProducts,
+    initialMeta,
+    useInitial: useServerSnapshot,
+  });
 
   function applyState(next: CatalogQueryState) {
-    const query = catalogStateToSearchParams(next).toString();
+    const query = catalogStateToSearchParams({ ...next, page: 1 }).toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
@@ -151,17 +163,13 @@ function CollectionView({
     return null;
   }
 
-  const products =
-    productsResult?.data ?? (useServerSnapshot ? initialProducts : []);
-  const meta = productsResult?.meta ?? (useServerSnapshot ? initialMeta : null);
-  const cards = products.map(toCardProduct);
   const filters = filtersData?.filters ?? [];
   const hasFilters = filters.length > 0 || Boolean(filtersData?.price);
   const showProductSkeleton =
     productsLoading &&
     cards.length === 0 &&
     !(useServerSnapshot && initialMeta != null);
-  const busy = productsFetching || filtersFetching;
+  const replacing = productsFetching && !loadingMore;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:py-10">
@@ -258,42 +266,16 @@ function CollectionView({
               No products match these filters.
             </p>
           ) : (
-            <div
-              className={`grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 ${
-                busy ? "opacity-70" : ""
-              }`}
-            >
-              {cards.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <>
+              <InfiniteProductGrid cards={cards} replacing={replacing} />
+              <InfiniteScrollSentinel
+                hasMore={hasMore}
+                loading={loadingMore}
+                error={loadError}
+                onLoadMore={loadMore}
+              />
+            </>
           )}
-
-          {meta && meta.totalPages > 1 ? (
-            <div className="mt-8 flex items-center justify-center gap-2">
-              <button
-                type="button"
-                disabled={!meta.hasPreviousPage}
-                onClick={() =>
-                  applyState({ ...state, page: Math.max(1, state.page - 1) })
-                }
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-brand-900 hover:bg-brand-50 disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-slate-500">
-                Page {meta.page} of {meta.totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={!meta.hasNextPage}
-                onClick={() => applyState({ ...state, page: state.page + 1 })}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-brand-900 hover:bg-brand-50 disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          ) : null}
         </div>
       </div>
 

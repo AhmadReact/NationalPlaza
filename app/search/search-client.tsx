@@ -1,52 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  toCardProduct,
-  useGetStoreProductsQuery,
-} from "@/app/store/customerAPI";
-import { ProductCard } from "@/components/product-card";
+  InfiniteProductGrid,
+  InfiniteScrollSentinel,
+  useInfiniteStoreProducts,
+} from "@/components/infinite-products";
+import { ProductCardSkeleton } from "@/components/product-card";
 import { getFetchErrorMessage } from "@/lib/api/errorMessage";
 
 const PAGE_SIZE = 20;
 
-function searchHref(query: string, page: number) {
-  const params = new URLSearchParams();
-  params.set("q", query);
-  if (page > 1) params.set("page", String(page));
-  return `/search?${params.toString()}`;
-}
-
-export function SearchResults({
-  query,
-  page,
-}: {
-  query: string;
-  page: number;
-}) {
-  const router = useRouter();
+export function SearchResults({ query }: { query: string }) {
   const skip = query.length === 0;
-
   const {
-    data: productsResult,
+    cards,
+    meta,
+    hasMore,
+    loadingMore,
+    loadError,
+    loadMore,
     isLoading,
     isFetching,
     isError,
     error,
-  } = useGetStoreProductsQuery(
-    {
+  } = useInfiniteStoreProducts({
+    params: {
       search: query,
       status: "ACTIVE",
-      page,
       limit: PAGE_SIZE,
     },
-    { skip },
-  );
-
-  const products = productsResult?.data ?? [];
-  const meta = productsResult?.meta;
-  const cards = products.map(toCardProduct);
+    skip,
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:py-10">
@@ -98,42 +83,19 @@ export function SearchResults({
             No products matched “{query}”. Try a brand name or a shorter term.
           </p>
         ) : (
-          <div
-            className={`grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 ${
-              isFetching ? "opacity-70" : ""
-            }`}
-          >
-            {cards.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <InfiniteProductGrid
+              cards={cards}
+              replacing={isFetching && !loadingMore}
+            />
+            <InfiniteScrollSentinel
+              hasMore={hasMore}
+              loading={loadingMore}
+              error={loadError}
+              onLoadMore={loadMore}
+            />
+          </>
         )}
-
-        {meta && meta.totalPages > 1 ? (
-          <div className="mt-8 flex items-center justify-center gap-2">
-            <button
-              type="button"
-              disabled={!meta.hasPreviousPage}
-              onClick={() =>
-                router.push(searchHref(query, Math.max(1, page - 1)))
-              }
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-brand-900 hover:bg-brand-50 disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <span className="text-sm text-slate-500">
-              Page {meta.page} of {meta.totalPages}
-            </span>
-            <button
-              type="button"
-              disabled={!meta.hasNextPage}
-              onClick={() => router.push(searchHref(query, page + 1))}
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-brand-900 hover:bg-brand-50 disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
-        ) : null}
       </div>
     </div>
   );
@@ -143,10 +105,7 @@ function ProductGridSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
-        <div
-          key={index}
-          className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-slate-100"
-        />
+        <ProductCardSkeleton key={index} />
       ))}
     </div>
   );

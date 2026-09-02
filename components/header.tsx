@@ -75,9 +75,28 @@ export function Header() {
     return roots.length > 0 ? roots : fallbackNavLinks;
   }, [categories]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function syncBodyScroll() {
+      document.body.style.overflow = window.matchMedia("(min-width: 1024px)")
+        .matches
+        ? ""
+        : "hidden";
+    }
+
+    syncBodyScroll();
+    const media = window.matchMedia("(min-width: 1024px)");
+    media.addEventListener("change", syncBodyScroll);
+    return () => {
+      media.removeEventListener("change", syncBodyScroll);
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
   return (
-    <header className="sticky top-0 z-50 shadow-lg shadow-brand-950/5">
-      <div className="bg-brand-950 text-xs text-brand-100 sm:text-sm">
+    <header className="sticky top-0 z-50 flex max-h-dvh flex-col overflow-hidden shadow-lg shadow-brand-950/5 lg:max-h-none lg:overflow-visible">
+      <div className="shrink-0 bg-brand-950 text-xs text-brand-100 sm:text-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2">
           <p className="flex items-center gap-2">
             <TruckIcon className="h-4 w-4 text-gold-400" />
@@ -97,7 +116,7 @@ export function Header() {
         </div>
       </div>
 
-      <div className="border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-6">
           <button
             className="-ml-1 rounded-lg p-2 text-brand-950 hover:bg-slate-100 lg:hidden"
@@ -185,7 +204,13 @@ export function Header() {
         </div>
       </div>
 
-      <nav className={`relative bg-brand-900 text-sm text-brand-100 ${menuOpen ? "block" : "hidden"} lg:block`}>
+      <nav
+        className={`relative bg-brand-900 text-sm text-brand-100 ${
+          menuOpen
+            ? "block min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            : "hidden"
+        } lg:block lg:flex-none lg:overflow-visible`}
+      >
         <div className="mx-auto max-w-7xl px-4">
           <ul className="flex flex-col lg:flex-row lg:items-center">
             {featuredLinks.map((link) => (
