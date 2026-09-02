@@ -208,11 +208,14 @@ export function catalogStateToApiParams(
 }
 
 export function hasActiveCatalogFilters(state: CatalogQueryState): boolean {
+  return activeCatalogFilterCount(state) > 0;
+}
+
+export function activeCatalogFilterCount(state: CatalogQueryState): number {
   return (
-    state.brandIds.length > 0 ||
-    state.inStock ||
-    state.minPrice != null ||
-    state.maxPrice != null ||
-    Object.values(state.attrs).some((values) => values.length > 0)
+    state.brandIds.length +
+    (state.inStock ? 1 : 0) +
+    (state.minPrice != null || state.maxPrice != null ? 1 : 0) +
+    Object.values(state.attrs).reduce((count, values) => count + values.length, 0)
   );
 }

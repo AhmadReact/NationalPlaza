@@ -29,7 +29,7 @@ import {
   catalogStatesEqual,
   COLLECTION_PAGE_SIZE,
   emptyCatalogQueryState,
-  hasActiveCatalogFilters,
+  activeCatalogFilterCount,
   parseCatalogSearchParams,
   type CatalogQueryState,
 } from "@/lib/catalog-query";
@@ -170,9 +170,11 @@ function CollectionView({
     cards.length === 0 &&
     !(useServerSnapshot && initialMeta != null);
   const replacing = productsFetching && !loadingMore;
+  const activeFilterCount = activeCatalogFilterCount(state);
+  const filtersActive = activeFilterCount > 0;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:py-10">
+    <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:py-10 lg:pb-10">
       <nav
         aria-label="Breadcrumb"
         className="flex items-center gap-2 text-xs text-slate-500"
@@ -199,23 +201,14 @@ function CollectionView({
               : "Shop this collection"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {hasActiveCatalogFilters(state) ? (
+        <div className="hidden items-center gap-2 lg:flex">
+          {filtersActive ? (
             <button
               type="button"
               onClick={() => applyState(emptyCatalogQueryState())}
               className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-brand-900 hover:bg-brand-50"
             >
               Clear filters
-            </button>
-          ) : null}
-          {hasFilters ? (
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(true)}
-              className="rounded-full bg-brand-900 px-4 py-2 text-sm font-semibold text-white lg:hidden"
-            >
-              Filters
             </button>
           ) : null}
         </div>
@@ -279,6 +272,36 @@ function CollectionView({
         </div>
       </div>
 
+      {hasFilters && !filtersOpen ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(15,23,42,0.12)] backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-7xl gap-2">
+            {filtersActive ? (
+              <button
+                type="button"
+                onClick={() => applyState(emptyCatalogQueryState())}
+                className="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-brand-900 hover:bg-brand-50"
+              >
+                Clear
+              </button>
+            ) : null}
+            <button
+              type="button"
+              aria-expanded={filtersOpen}
+              aria-controls="mobile-collection-filters"
+              onClick={() => setFiltersOpen(true)}
+              className="relative flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-900 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-800"
+            >
+              Filters
+              {filtersActive ? (
+                <span className="grid min-w-5 place-items-center rounded-full bg-gold-400 px-1.5 text-[11px] font-bold text-brand-950">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {filtersOpen && hasFilters ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
@@ -287,7 +310,10 @@ function CollectionView({
             className="absolute inset-0 bg-brand-950/40"
             onClick={() => setFiltersOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-xl">
+          <div
+            id="mobile-collection-filters"
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-xl"
+          >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-brand-950">
                 Filters
