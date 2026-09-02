@@ -174,7 +174,7 @@ function CollectionView({
   const filtersActive = activeFilterCount > 0;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:py-10 lg:pb-10">
+    <div className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:py-10 lg:pb-10">
       <nav
         aria-label="Breadcrumb"
         className="flex items-center gap-2 text-xs text-slate-500"
@@ -273,31 +273,36 @@ function CollectionView({
       </div>
 
       {hasFilters && !filtersOpen ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(15,23,42,0.12)] backdrop-blur lg:hidden">
-          <div className="mx-auto flex max-w-7xl gap-2">
-            {filtersActive ? (
-              <button
-                type="button"
-                onClick={() => applyState(emptyCatalogQueryState())}
-                className="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-brand-900 hover:bg-brand-50"
-              >
-                Clear
-              </button>
-            ) : null}
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(1.75rem,calc(env(safe-area-inset-bottom)+0.75rem))] lg:hidden">
+          <div className="pointer-events-auto flex max-w-full items-center overflow-hidden rounded-full bg-brand-950 text-white shadow-xl shadow-brand-950/30 ring-1 ring-gold-400/90">
             <button
               type="button"
-              aria-expanded={filtersOpen}
+              aria-expanded={false}
+              aria-haspopup="dialog"
               aria-controls="mobile-collection-filters"
               onClick={() => setFiltersOpen(true)}
-              className="relative flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-900 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-800"
+              className="flex min-h-12 items-center gap-2.5 px-5 py-2.5 text-left"
             >
-              Filters
-              {filtersActive ? (
-                <span className="grid min-w-5 place-items-center rounded-full bg-gold-400 px-1.5 text-[11px] font-bold text-brand-950">
-                  {activeFilterCount}
-                </span>
-              ) : null}
+              <FilterSlidersIcon className="size-4 shrink-0 text-gold-400" />
+              <span className="font-display text-sm font-semibold">
+                {filtersActive
+                  ? `${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} on`
+                  : "Filter products"}
+              </span>
             </button>
+            {filtersActive ? (
+              <>
+                <span className="h-6 w-px shrink-0 bg-white/20" aria-hidden />
+                <button
+                  type="button"
+                  aria-label="Clear all filters"
+                  onClick={() => applyState(emptyCatalogQueryState())}
+                  className="grid size-12 shrink-0 place-items-center text-gold-300 hover:text-gold-200"
+                >
+                  <CloseIcon className="size-4" />
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -307,38 +312,111 @@ function CollectionView({
           <button
             type="button"
             aria-label="Close filters"
-            className="absolute inset-0 bg-brand-950/40"
+            className="absolute inset-0 bg-brand-950/50"
             onClick={() => setFiltersOpen(false)}
           />
           <div
             id="mobile-collection-filters"
-            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-filters-title"
+            className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl bg-white shadow-2xl"
           >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-lg font-bold text-brand-950">
-                Filters
-              </h2>
+            <div className="shrink-0 px-5 pt-3">
+              <div
+                className="mx-auto h-1.5 w-12 rounded-full bg-slate-200"
+                aria-hidden
+              />
+              <div className="mt-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2
+                    id="mobile-filters-title"
+                    className="font-display text-lg font-bold text-brand-950"
+                  >
+                    Refine results
+                  </h2>
+                  <p className="mt-0.5 text-sm text-slate-500">
+                    {meta
+                      ? `${meta.total} product${meta.total === 1 ? "" : "s"}`
+                      : "Narrow by brand, price, and specs"}
+                    {filtersActive
+                      ? ` · ${activeFilterCount} selected`
+                      : ""}
+                  </p>
+                </div>
+                {filtersActive ? (
+                  <button
+                    type="button"
+                    onClick={() => applyState(emptyCatalogQueryState())}
+                    className="shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold text-brand-800 hover:bg-brand-50"
+                  >
+                    Reset
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+              <CollectionFilters
+                key={`${slug}-mobile`}
+                filters={filters}
+                price={filtersData?.price}
+                state={state}
+                onChange={(next) => {
+                  applyState(next);
+                }}
+              />
+            </div>
+            <div className="shrink-0 border-t border-slate-200 bg-white px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
-                className="rounded-lg px-2 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-50"
+                className="w-full rounded-full bg-brand-900 px-4 py-3.5 text-sm font-semibold text-white hover:bg-brand-800"
               >
-                Done
+                {meta
+                  ? `See ${meta.total} product${meta.total === 1 ? "" : "s"}`
+                  : "See products"}
               </button>
             </div>
-            <CollectionFilters
-              key={`${slug}-mobile`}
-              filters={filters}
-              price={filtersData?.price}
-              state={state}
-              onChange={(next) => {
-                applyState(next);
-              }}
-            />
           </div>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function FilterSlidersIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M4 8h16" />
+      <circle cx="8" cy="8" r="2.25" fill="currentColor" stroke="none" />
+      <path d="M4 16h16" />
+      <circle cx="16" cy="16" r="2.25" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
   );
 }
 
