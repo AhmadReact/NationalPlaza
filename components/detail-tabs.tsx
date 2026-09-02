@@ -52,19 +52,22 @@ export function DetailTabs({
           </div>
         )}
 
-        {active === 1 && (
-          <dl className="grid gap-x-10 sm:grid-cols-2">
-            {specs.map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between gap-4 border-b border-slate-100 py-3.5"
-              >
-                <dt className="text-sm font-semibold text-slate-500">{label}</dt>
-                <dd className="text-sm font-bold text-brand-950 text-right">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
+        {active === 1 &&
+          (specs.length > 0 ? (
+            <dl className="grid gap-x-10 sm:grid-cols-2">
+              {specs.map(([label, value], index) => (
+                <div
+                  key={`${label}-${index}`}
+                  className="flex items-center justify-between gap-4 border-b border-slate-100 py-3.5"
+                >
+                  <dt className="text-sm font-semibold text-slate-500">{label}</dt>
+                  <dd className="text-sm font-bold text-brand-950 text-right">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="text-sm text-slate-500">No specifications available for this product.</p>
+          ))}
 
         {active === 2 && (
           <ul className="grid gap-5 sm:grid-cols-2">

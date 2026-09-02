@@ -49,19 +49,9 @@ function buildDetailContent(product: StoreProduct) {
         .filter(Boolean)
     : fallback.intro;
 
-  const specsFromApi = [...(product.specifications ?? [])]
+  const specs = [...(product.specifications ?? [])]
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((s): [string, string] => [s.name, s.value]);
-
-  const specs: [string, string][] =
-    specsFromApi.length > 0
-      ? [
-          ["Brand", product.brand?.name ?? ""],
-          ["Category", product.category?.name ?? ""],
-          ...(product.sku ? ([["SKU", product.sku]] as [string, string][]) : []),
-          ...specsFromApi,
-        ]
-      : fallback.specs;
 
   return { intro, specs };
 }
