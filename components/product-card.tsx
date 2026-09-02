@@ -6,6 +6,23 @@ import { AddToCartButton } from "./add-to-cart-button";
 import { ApplianceArt } from "./appliance-art";
 import { WishlistButton } from "./wishlist-button";
 
+export function ProductCardSkeleton() {
+  return (
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="aspect-square animate-pulse bg-slate-100" />
+      <div className="flex flex-1 flex-col p-4">
+        <div className="h-3 w-16 animate-pulse rounded bg-slate-200" />
+        <div className="mt-1.5 h-4 w-full animate-pulse rounded bg-slate-200" />
+        <div className="mt-1 h-4 w-2/3 animate-pulse rounded bg-slate-200" />
+        <div className="mt-auto pt-3">
+          <div className="h-6 w-24 animate-pulse rounded bg-slate-200" />
+          <div className="mt-3 h-10 w-full animate-pulse rounded-xl bg-slate-200" />
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export function ProductCard({
   product,
   showWishlist = true,

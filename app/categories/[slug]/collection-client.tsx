@@ -1,40 +1,80 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type {
+  Category,
+  CategoryFiltersData,
+} from "@/app/admin/(panel)/categories/store/categoryAPI";
 import {
   resolveCategoryFiltersId,
   toCardProduct,
   useGetStoreCategoryBySlugQuery,
   useGetStoreCategoryFiltersQuery,
   useGetStoreProductsQuery,
+  type PaginationMeta,
+  type StoreProduct,
 } from "@/app/store/customerAPI";
 import { CollectionFilters } from "@/components/collection-filters";
 import { CategoryBanners } from "@/components/storefront-banners";
-import { ProductCard } from "@/components/product-card";
+import { ProductCard, ProductCardSkeleton } from "@/components/product-card";
 import { getFetchErrorMessage } from "@/lib/api/errorMessage";
 import {
   catalogStateToApiParams,
   catalogStateToSearchParams,
+  catalogStatesEqual,
+  COLLECTION_PAGE_SIZE,
   emptyCatalogQueryState,
   hasActiveCatalogFilters,
   parseCatalogSearchParams,
   type CatalogQueryState,
 } from "@/lib/catalog-query";
 
-const PAGE_SIZE = 20;
+export type CollectionClientProps = {
+  slug: string;
+  initialCategory: Category;
+  initialProducts: StoreProduct[];
+  initialMeta: PaginationMeta | null;
+  initialFilters: CategoryFiltersData | null;
+  initialState: CatalogQueryState;
+};
 
-export function CollectionClient({ slug }: { slug: string }) {
-  const router = useRouter();
-  const pathname = usePathname();
+export function CollectionClient(props: CollectionClientProps) {
+  return (
+    <Suspense
+      fallback={
+        <CollectionView {...props} state={props.initialState} />
+      }
+    >
+      <CollectionWithSearchParams {...props} />
+    </Suspense>
+  );
+}
+
+function CollectionWithSearchParams(props: CollectionClientProps) {
   const searchParams = useSearchParams();
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
   const state = useMemo(
     () => parseCatalogSearchParams(searchParams),
     [searchParams],
   );
+
+  return <CollectionView {...props} state={state} />;
+}
+
+function CollectionView({
+  slug,
+  initialCategory,
+  initialProducts,
+  initialMeta,
+  initialFilters,
+  initialState,
+  state,
+}: CollectionClientProps & { state: CatalogQueryState }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const useServerSnapshot = catalogStatesEqual(state, initialState);
 
   const {
     data: categoryResult,
@@ -43,7 +83,7 @@ export function CollectionClient({ slug }: { slug: string }) {
     error: categoryErr,
   } = useGetStoreCategoryBySlugQuery(slug);
 
-  const category = categoryResult?.data;
+  const category = categoryResult?.data ?? initialCategory;
   const filterQuery = catalogStateToApiParams(state, { status: "ACTIVE" });
 
   const {
@@ -54,15 +94,14 @@ export function CollectionClient({ slug }: { slug: string }) {
       slug,
       status: "ACTIVE",
       brandId: filterQuery.brandId,
-      minPrice: filterQuery.minPrice,
-      maxPrice: filterQuery.maxPrice,
       inStock: filterQuery.inStock,
       attrs: filterQuery.attrs,
     },
     { skip: !category },
   );
 
-  const filtersData = filtersResult?.data;
+  const filtersData =
+    filtersResult?.data ?? (useServerSnapshot ? initialFilters : null);
   const categoryId = resolveCategoryFiltersId(filtersData) ?? category?.id;
 
   const {
@@ -76,7 +115,7 @@ export function CollectionClient({ slug }: { slug: string }) {
       ...catalogStateToApiParams(state, {
         categoryId,
         status: "ACTIVE",
-        limit: PAGE_SIZE,
+        limit: COLLECTION_PAGE_SIZE,
       }),
     },
     { skip: !categoryId },
@@ -87,28 +126,41 @@ export function CollectionClient({ slug }: { slug: string }) {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
-  if (categoryLoading) {
-    return <CollectionSkeleton />;
+  if (!category) {
+    if (categoryLoading) {
+      return <CollectionSkeleton />;
+    }
+
+    if (categoryError) {
+      return (
+        <div className="mx-auto max-w-7xl px-4 py-16">
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-sm text-red-700">
+            {getFetchErrorMessage(
+              categoryErr as {
+                status?: number | string;
+                data?: unknown;
+                error?: string;
+              },
+              "Category not found.",
+            )}
+          </p>
+        </div>
+      );
+    }
+
+    return null;
   }
 
-  if (categoryError || !category) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-16">
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-sm text-red-700">
-          {getFetchErrorMessage(
-            categoryErr as { status?: number | string; data?: unknown; error?: string },
-            "Category not found.",
-          )}
-        </p>
-      </div>
-    );
-  }
-
-  const products = productsResult?.data ?? [];
-  const meta = productsResult?.meta;
+  const products =
+    productsResult?.data ?? (useServerSnapshot ? initialProducts : []);
+  const meta = productsResult?.meta ?? (useServerSnapshot ? initialMeta : null);
   const cards = products.map(toCardProduct);
   const filters = filtersData?.filters ?? [];
   const hasFilters = filters.length > 0 || Boolean(filtersData?.price);
+  const showProductSkeleton =
+    productsLoading &&
+    cards.length === 0 &&
+    !(useServerSnapshot && initialMeta != null);
   const busy = productsFetching || filtersFetching;
 
   return (
@@ -163,7 +215,11 @@ export function CollectionClient({ slug }: { slug: string }) {
 
       <CategoryBanners categoryId={category.id} />
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <div
+        className={`mt-8 grid gap-8 ${
+          hasFilters ? "lg:grid-cols-[260px_minmax(0,1fr)]" : ""
+        }`}
+      >
         {hasFilters ? (
           <aside className="hidden lg:block">
             <div className="sticky top-36 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -172,6 +228,7 @@ export function CollectionClient({ slug }: { slug: string }) {
               </h2>
               <div className="mt-4">
                 <CollectionFilters
+                  key={slug}
                   filters={filters}
                   price={filtersData?.price}
                   state={state}
@@ -194,7 +251,7 @@ export function CollectionClient({ slug }: { slug: string }) {
                 "Failed to load products.",
               )}
             </p>
-          ) : productsLoading && cards.length === 0 ? (
+          ) : showProductSkeleton ? (
             <ProductGridSkeleton />
           ) : cards.length === 0 ? (
             <p className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
@@ -262,6 +319,7 @@ export function CollectionClient({ slug }: { slug: string }) {
               </button>
             </div>
             <CollectionFilters
+              key={`${slug}-mobile`}
               filters={filters}
               price={filtersData?.price}
               state={state}
@@ -278,10 +336,12 @@ export function CollectionClient({ slug }: { slug: string }) {
 
 function CollectionSkeleton() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10">
-      <div className="h-8 w-48 animate-pulse rounded bg-slate-200" />
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:py-10">
+      <div className="h-3 w-40 animate-pulse rounded bg-slate-200" />
+      <div className="mt-4 h-8 w-56 animate-pulse rounded bg-slate-200" />
+      <div className="mt-2 h-4 w-32 animate-pulse rounded bg-slate-200" />
       <div className="mt-8 grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <div className="hidden h-96 animate-pulse rounded-2xl bg-slate-100 lg:block" />
+        <div className="hidden min-h-112 animate-pulse rounded-2xl border border-slate-200 bg-slate-100 lg:block" />
         <ProductGridSkeleton />
       </div>
     </div>
@@ -292,10 +352,7 @@ function ProductGridSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
-        <div
-          key={index}
-          className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-slate-100"
-        />
+        <ProductCardSkeleton key={index} />
       ))}
     </div>
   );

@@ -114,15 +114,15 @@ export const heroSlides: HeroSlide[] = [
   {
     id: "fresh-deals",
     kicker: "Fresh Deals Week",
-    title: "Refrigerators with",
-    highlight: "Free Delivery",
+    title: "Refrigerators at",
+    highlight: "Best Prices",
     subtitle:
-      "Dawlance, Haier, PEL & Homage inverter refrigerators — delivered anywhere in Pakistan.",
+      "Dawlance, Haier, PEL & Homage inverter refrigerators — delivered across Punjab.",
     cta: "Shop Refrigerators",
     href: "/categories/refrigerator",
     gradient: "from-emerald-950 via-emerald-900 to-emerald-700",
     art: "fridge",
-    stat: { value: "0km", label: "Delivery Charges" },
+    stat: { value: "A++", label: "Energy Rating" },
   },
   {
     id: "cinema-home",

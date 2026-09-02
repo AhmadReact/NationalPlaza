@@ -4,7 +4,7 @@ export const SITE_NAME = "National Electronics";
 export const SITE_TAGLINE =
   "Pakistan's Trusted Electronics Store Since 1946";
 export const SITE_DESCRIPTION =
-  "National Electronics has served Pakistan since 1946. Shop air conditioners, refrigerators, air coolers, LED TVs and all home appliances at the best prices with nationwide delivery.";
+  "National Electronics has served Pakistan since 1946. Shop air conditioners, refrigerators, air coolers, LED TVs and all home appliances at the best prices with delivery across Punjab.";
 export const SITE_EMAIL = "info@nationalelectronics.pk";
 export const SITE_PHONE = "+92-334-4376840";
 
@@ -73,8 +73,12 @@ export function buildSiteGraphJsonLd(origin: string) {
           addressCountry: "PK",
         },
         areaServed: {
-          "@type": "Country",
-          name: "Pakistan",
+          "@type": "AdministrativeArea",
+          name: "Punjab",
+          containedInPlace: {
+            "@type": "Country",
+            name: "Pakistan",
+          },
         },
       },
       {
@@ -127,7 +131,7 @@ export function productMetaDescription(product: StoreProduct): string {
   const category = product.category?.name;
   const label = [brand, category].filter(Boolean).join(" ");
   return truncateText(
-    `Buy ${product.name} in Pakistan at ${SITE_NAME}.${label ? ` ${label}` : ""} with nationwide delivery, cash on delivery, and official warranty.`,
+    `Buy ${product.name} in Pakistan at ${SITE_NAME}.${label ? ` ${label}` : ""} with delivery across Punjab, cash on delivery, and official warranty.`,
     160,
   );
 }

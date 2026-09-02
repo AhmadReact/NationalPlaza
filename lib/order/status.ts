@@ -16,7 +16,7 @@ export const ORDER_STATUSES: OrderStatus[] = [
 ];
 
 export const DEFAULT_SHIPPING_MESSAGE =
-  "Our representative will tell you the shipping charges.";
+  "Our representative will confirm shipping charges for delivery within Punjab.";
 
 export const CUSTOMER_STATUS_LABEL: Record<OrderStatus, string> = {
   PENDING: "Pending",

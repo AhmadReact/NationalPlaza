@@ -19,12 +19,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     storeRef.current = makeStore();
   }
 
+  const content = (
+    <>
+      <CartBootstrap />
+      <StoreToast />
+      {children}
+    </>
+  );
+
   return (
     <Provider store={storeRef.current.store}>
-      <PersistGate loading={null} persistor={storeRef.current.persistor}>
-        <CartBootstrap />
-        <StoreToast />
-        {children}
+      <PersistGate loading={content} persistor={storeRef.current.persistor}>
+        {content}
       </PersistGate>
     </Provider>
   );

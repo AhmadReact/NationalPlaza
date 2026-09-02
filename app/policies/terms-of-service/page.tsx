@@ -56,12 +56,17 @@ export default function TermsOfServicePage() {
       <PolicyCard id="shipping" number="04" title="Shipping and Delivery">
         <ul className="list-disc space-y-2 pl-5">
           <li>
+            We currently deliver within Punjab only. Orders outside Punjab
+            may be cancelled.
+          </li>
+          <li>
             We will deliver the product to your provided address within the
             specified period. Unexpected circumstances can cause delays.
           </li>
           <li>
-            Shipping charges and estimated delivery times will be provided
-            during checkout.
+            Delivery is not free. Shipping charges and estimated delivery
+            times will be confirmed at checkout or by our team after you
+            place the order.
           </li>
         </ul>
       </PolicyCard>

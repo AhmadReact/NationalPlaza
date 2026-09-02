@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Form from "next/form";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import type { CategoryTreeNode } from "@/app/admin/(panel)/categories/store/categoryAPI";
 import {
   accountApi,
   unwrapAccountProducts,
@@ -17,7 +18,11 @@ import {
   selectCustomerIsAuthenticated,
   selectCustomerUser,
 } from "@/app/store/customerAuthSlice";
-import { useGetStoreCategoryTreeQuery } from "@/app/store/customerAPI";
+import {
+  getArtKindForSlug,
+  useGetStoreCategoryTreeQuery,
+} from "@/app/store/customerAPI";
+import { ApplianceArt } from "@/components/appliance-art";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 
 const fallbackNavLinks = [
@@ -28,10 +33,13 @@ const fallbackNavLinks = [
 ];
 
 const staticLinks = [
-  { label: "All Categories", href: "/categories" },
   { label: "Why Us", href: "/#why-us" },
   { label: "Reviews", href: "/#reviews" },
 ];
+
+function hasFineHover() {
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,18 +62,18 @@ export function Header() {
     window.location.assign("/");
   }
 
-  const navLinks = useMemo(() => {
-    const roots = (treeData?.data ?? [])
-      .filter((node) => node.isActive !== false)
-      .slice(0, 5)
-      .map((node) => ({
-        label: node.name,
-        href: `/categories/${node.slug}`,
-      }));
+  const categories = useMemo(
+    () => (treeData?.data ?? []).filter((node) => node.isActive !== false),
+    [treeData?.data],
+  );
 
-    const categoryLinks = roots.length > 0 ? roots : fallbackNavLinks;
-    return [...categoryLinks, ...staticLinks];
-  }, [treeData?.data]);
+  const featuredLinks = useMemo(() => {
+    const roots = categories.slice(0, 5).map((node) => ({
+      label: node.name,
+      href: `/categories/${node.slug}`,
+    }));
+    return roots.length > 0 ? roots : fallbackNavLinks;
+  }, [categories]);
 
   return (
     <header className="sticky top-0 z-50 shadow-lg shadow-brand-950/5">
@@ -73,8 +81,8 @@ export function Header() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2">
           <p className="flex items-center gap-2">
             <TruckIcon className="h-4 w-4 text-gold-400" />
-            <span className="hidden sm:inline">Free shipping all over Pakistan</span>
-            <span className="sm:hidden">Nationwide shipping</span>
+            <span className="hidden sm:inline">Delivery across Punjab · charges apply</span>
+            <span className="sm:hidden">Punjab delivery</span>
           </p>
           <div className="flex items-center gap-4">
             <a href="tel:+923344376840" className="flex items-center gap-1.5 transition-colors hover:text-gold-300">
@@ -177,15 +185,27 @@ export function Header() {
         </div>
       </div>
 
-      <nav className={`bg-brand-900 text-sm text-brand-100 ${menuOpen ? "block" : "hidden"} lg:block`}>
+      <nav className={`relative bg-brand-900 text-sm text-brand-100 ${menuOpen ? "block" : "hidden"} lg:block`}>
         <div className="mx-auto max-w-7xl px-4">
           <ul className="flex flex-col lg:flex-row lg:items-center">
-            {navLinks.map((link) => (
+            {featuredLinks.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className="block border-b-2 border-transparent px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300 lg:hover:border-gold-400"
+                  className="block border-b-2 border-transparent px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300 focus-visible:bg-brand-800 focus-visible:text-gold-300 lg:hover:border-gold-400"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+            <AllCategoriesNavItem categories={categories} />
+            {staticLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="block border-b-2 border-transparent px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300 focus-visible:bg-brand-800 focus-visible:text-gold-300 lg:hover:border-gold-400"
                 >
                   {link.label}
                 </Link>
@@ -229,6 +249,171 @@ export function Header() {
         </div>
       </nav>
     </header>
+  );
+}
+
+function AllCategoriesNavItem({
+  categories,
+}: {
+  categories: CategoryTreeNode[];
+}) {
+  const [open, setOpen] = useState(false);
+  const itemRef = useRef<HTMLLIElement>(null);
+  const menuId = "all-categories-menu";
+  const items =
+    categories.length > 0
+      ? categories
+      : fallbackNavLinks.map((link) => ({
+          id: link.href,
+          name: link.label,
+          slug: link.href.replace("/categories/", ""),
+          description: null,
+          image: null,
+          isActive: true,
+          sortOrder: 0,
+          showOnHome: true,
+          homeSortOrder: 0,
+          children: [] as CategoryTreeNode[],
+        }));
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    function onPointerDown(event: PointerEvent) {
+      if (!itemRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
+  function handleMouseEnter() {
+    if (hasFineHover()) setOpen(true);
+  }
+
+  function handleMouseLeave() {
+    if (!hasFineHover()) return;
+    if (itemRef.current?.contains(document.activeElement)) return;
+    setOpen(false);
+  }
+
+  function handleClick() {
+    if (hasFineHover()) {
+      setOpen(true);
+      return;
+    }
+    setOpen((value) => !value);
+  }
+
+  function handleBlur(event: React.FocusEvent<HTMLLIElement>) {
+    const next = event.relatedTarget as Node | null;
+    if (!next) return;
+    if (!itemRef.current?.contains(next)) setOpen(false);
+  }
+
+  return (
+    <li
+      ref={itemRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onBlur={handleBlur}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="true"
+        aria-controls={menuId}
+        onClick={handleClick}
+        className={`flex w-full items-center justify-between gap-1.5 border-b-2 px-4 py-3 font-medium transition-colors hover:bg-brand-800 hover:text-gold-300 focus-visible:bg-brand-800 focus-visible:text-gold-300 lg:w-auto lg:justify-center lg:hover:border-gold-400 ${
+          open
+            ? "border-gold-400 bg-brand-800 text-gold-300"
+            : "border-transparent"
+        }`}
+      >
+        All Categories
+        <ChevronIcon
+          className={`h-3.5 w-3.5 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <div
+        id={menuId}
+        role="region"
+        aria-label="All categories"
+        hidden={!open}
+        className={
+          open
+            ? "bg-brand-950 lg:absolute lg:inset-x-0 lg:top-full lg:z-50 lg:border-t lg:border-gold-400/80 lg:bg-white lg:shadow-xl lg:shadow-brand-950/20"
+            : "hidden"
+        }
+      >
+        <ul className="flex flex-col lg:mx-auto lg:grid lg:max-h-[min(70vh,28rem)] lg:max-w-7xl lg:grid-cols-3 lg:gap-2 lg:overflow-y-auto lg:px-4 lg:py-5 xl:grid-cols-4">
+          {items.map((category) => {
+            const children = (category.children ?? []).filter(
+              (child) => child.isActive !== false,
+            );
+            return (
+              <li key={category.id}>
+                <div className="lg:rounded-xl lg:p-1.5 lg:transition-colors lg:hover:bg-brand-50">
+                  <Link
+                    href={`/categories/${category.slug}`}
+                    className="flex items-center gap-3 px-8 py-2.5 text-sm font-medium text-brand-100 transition-colors hover:bg-brand-800 hover:text-gold-300 focus-visible:bg-brand-800 focus-visible:text-gold-300 lg:rounded-lg lg:px-2 lg:py-1.5 lg:text-brand-950 lg:hover:bg-transparent lg:hover:text-brand-950 lg:focus-visible:bg-transparent lg:focus-visible:text-brand-950 lg:focus-visible:outline-2 lg:focus-visible:outline-offset-2 lg:focus-visible:outline-brand-700"
+                  >
+                    <span className="hidden size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-linear-to-br from-brand-50 to-slate-100 text-brand-800 lg:grid">
+                      {category.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={category.image}
+                          alt=""
+                          className="size-7 object-contain"
+                        />
+                      ) : (
+                        <ApplianceArt
+                          kind={getArtKindForSlug(category.slug)}
+                          className="size-7"
+                        />
+                      )}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate lg:font-semibold">
+                        {category.name}
+                      </span>
+                      <span className="hidden text-[11px] text-slate-400 lg:block" aria-hidden="true">
+                        View collection
+                      </span>
+                    </span>
+                  </Link>
+                  {children.length > 0 ? (
+                    <ul className="lg:mt-0.5 lg:flex lg:flex-col lg:pl-13">
+                      {children.map((child) => (
+                        <li key={child.id}>
+                          <Link
+                            href={`/categories/${child.slug}`}
+                            className="block px-12 py-2 text-sm text-brand-200/80 transition-colors hover:bg-brand-800 hover:text-gold-300 focus-visible:bg-brand-800 focus-visible:text-gold-300 lg:truncate lg:py-0.5 lg:pl-0 lg:text-xs lg:text-slate-500 lg:hover:bg-transparent lg:hover:text-brand-800 lg:focus-visible:bg-transparent lg:focus-visible:text-brand-800"
+                          >
+                            {child.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </li>
   );
 }
 
@@ -350,6 +535,13 @@ function SparkIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
       <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2 19 19M5 19l2.8-2.8M16.2 7.8 19 5" />
+    </svg>
+  );
+}
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)} aria-hidden="true">
+      <polyline points="6 9 12 15 18 9" />
     </svg>
   );
 }

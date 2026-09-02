@@ -4,7 +4,7 @@ import { useState } from "react";
 
 const whyChooseUs = [
   { title: "100% Authentic Electronics", text: "We offer only genuine, top-brand products sourced directly from authorized distributors." },
-  { title: "Fast & Reliable Delivery", text: "Get your order swiftly and securely, delivered anywhere in Pakistan." },
+  { title: "Fast & Reliable Delivery", text: "Get your order swiftly and securely, delivered across Punjab. Shipping charges apply." },
   { title: "Customer-First Approach", text: "Your satisfaction is our top priority — before and after the sale." },
   { title: "80 Years of Trust", text: "Serving Pakistani families since 1946 with honest prices and honest advice." },
   { title: "Guaranteed Quality & Originality", text: "Every purchase comes with official warranty and complete peace of mind." },

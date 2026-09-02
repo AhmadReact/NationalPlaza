@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatPrice } from "@/lib/data";
 import type { CategoryFilterGroup } from "@/app/admin/(panel)/categories/store/categoryAPI";
 import type { CatalogQueryState } from "@/lib/catalog-query";
@@ -31,19 +31,29 @@ function PriceRange({
   valueMax?: number;
   onCommit: (next: { minPrice?: number; maxPrice?: number }) => void;
 }) {
-  const [lo, setLo] = useState(valueMin ?? min);
-  const [hi, setHi] = useState(valueMax ?? max);
+  const boundMin = Math.min(min, valueMin ?? min);
+  const boundMax = Math.max(max, valueMax ?? max);
+  const [lo, setLo] = useState(valueMin ?? boundMin);
+  const [hi, setHi] = useState(valueMax ?? boundMax);
+  const loRef = useRef(lo);
+  const hiRef = useRef(hi);
 
   useEffect(() => {
-    setLo(valueMin ?? min);
-    setHi(valueMax ?? max);
-  }, [min, max, valueMin, valueMax]);
+    const nextLo = valueMin ?? boundMin;
+    const nextHi = valueMax ?? boundMax;
+    setLo(nextLo);
+    setHi(nextHi);
+    loRef.current = nextLo;
+    hiRef.current = nextHi;
+  }, [boundMin, boundMax, valueMin, valueMax]);
 
-  function commit(nextLo: number, nextHi: number) {
-    onCommit({
-      minPrice: nextLo <= min ? undefined : nextLo,
-      maxPrice: nextHi >= max ? undefined : nextHi,
-    });
+  function commitCurrent() {
+    const nextLo = loRef.current;
+    const nextHi = hiRef.current;
+    const minPrice = nextLo <= boundMin ? undefined : nextLo;
+    const maxPrice = nextHi >= boundMax ? undefined : nextHi;
+    if (minPrice === valueMin && maxPrice === valueMax) return;
+    onCommit({ minPrice, maxPrice });
   }
 
   return (
@@ -51,31 +61,37 @@ function PriceRange({
       <div className="relative h-6">
         <input
           type="range"
-          min={min}
-          max={max}
+          min={boundMin}
+          max={boundMax}
           value={lo}
           onChange={(e) => {
-            const nextLo = Math.min(Number(e.target.value), hi);
+            const nextLo = Math.min(Number(e.target.value), hiRef.current);
+            loRef.current = nextLo;
             setLo(nextLo);
-            commit(nextLo, hi);
           }}
+          onPointerUp={commitCurrent}
+          onKeyUp={commitCurrent}
+          onBlur={commitCurrent}
           className="absolute inset-x-0 top-1.5 z-10 h-1.5 w-full appearance-none bg-transparent"
           aria-label="Minimum price"
         />
         <input
           type="range"
-          min={min}
-          max={max}
+          min={boundMin}
+          max={boundMax}
           value={hi}
           onChange={(e) => {
-            const nextHi = Math.max(Number(e.target.value), lo);
+            const nextHi = Math.max(Number(e.target.value), loRef.current);
+            hiRef.current = nextHi;
             setHi(nextHi);
-            commit(lo, nextHi);
           }}
+          onPointerUp={commitCurrent}
+          onKeyUp={commitCurrent}
+          onBlur={commitCurrent}
           className="absolute inset-x-0 top-1.5 z-20 h-1.5 w-full appearance-none bg-transparent"
           aria-label="Maximum price"
         />
-        <div className="absolute inset-x-0 top-[11px] h-1.5 rounded-full bg-slate-200" />
+        <div className="absolute inset-x-0 top-2.75 h-1.5 rounded-full bg-slate-200" />
       </div>
       <div className="flex items-center justify-between gap-2 text-xs font-semibold text-slate-600">
         <span>{formatPrice(lo)}</span>
@@ -139,8 +155,24 @@ export function CollectionFilters({
   state: CatalogQueryState;
   onChange: (next: CatalogQueryState) => void;
 }) {
-  const priceMin = price?.min;
-  const priceMax = price?.max;
+  const boundsRef = useRef<{ min: number; max: number } | null>(null);
+  const incomingMin = price?.min;
+  const incomingMax = price?.max;
+  if (
+    incomingMin != null &&
+    incomingMax != null &&
+    Number.isFinite(incomingMin) &&
+    Number.isFinite(incomingMax)
+  ) {
+    const current = boundsRef.current;
+    boundsRef.current = {
+      min: current ? Math.min(current.min, incomingMin) : incomingMin,
+      max: current ? Math.max(current.max, incomingMax) : incomingMax,
+    };
+  }
+
+  const priceMin = boundsRef.current?.min;
+  const priceMax = boundsRef.current?.max;
   const showPrice =
     priceMin != null &&
     priceMax != null &&

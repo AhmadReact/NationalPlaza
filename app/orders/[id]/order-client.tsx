@@ -192,7 +192,8 @@ export default function OrderClient({ id }: { id: string }) {
                     <span className="font-extrabold">{order.orderNumber}</span>
                   </p>
                   <p className="mt-1 text-sm text-emerald-800">
-                    A representative will call with shipping charges.
+                    A representative will call with shipping charges for delivery
+                    within Punjab.
                   </p>
                 </div>
               )}

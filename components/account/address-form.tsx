@@ -20,7 +20,7 @@ const emptyForm: CreateAddressInput = {
   line1: "",
   line2: "",
   city: "",
-  state: "",
+  state: "Punjab",
   postalCode: "",
   country: "PK",
   isDefault: false,
@@ -34,7 +34,7 @@ function fromAddress(address: Address): CreateAddressInput {
     line1: address.line1,
     line2: address.line2 ?? "",
     city: address.city,
-    state: address.state ?? "",
+    state: "Punjab",
     postalCode: address.postalCode,
     country: address.country || "PK",
     isDefault: address.isDefault,
@@ -82,7 +82,7 @@ export function AddressForm({
         label: form.label?.trim() || undefined,
         phone: form.phone?.trim(),
         line2: form.line2?.trim() || undefined,
-        state: form.state?.trim() || undefined,
+        state: "Punjab",
         country: form.country?.trim() || "PK",
       });
     } catch {
@@ -92,6 +92,9 @@ export function AddressForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      <p className="text-xs text-slate-500">
+        We currently deliver within Punjab only. Shipping charges apply.
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label="Label"
@@ -142,8 +145,9 @@ export function AddressForm({
         />
         <Field
           label="State / province"
-          value={form.state ?? ""}
-          onChange={(value) => setField("state", value)}
+          readOnly
+          value="Punjab"
+          onChange={() => undefined}
         />
         <Field
           label="Postal code"
@@ -195,12 +199,14 @@ function Field({
   value,
   onChange,
   required = false,
+  readOnly = false,
   className = "",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  readOnly?: boolean;
   className?: string;
 }) {
   return (
@@ -210,9 +216,18 @@ function Field({
       </span>
       <input
         required={required}
+        readOnly={readOnly}
+        aria-readonly={readOnly || undefined}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600"
+        onChange={(e) => {
+          if (readOnly) return;
+          onChange(e.target.value);
+        }}
+        className={`mt-1 w-full rounded-xl border-2 px-3 py-2 text-sm outline-none ${
+          readOnly
+            ? "cursor-default border-slate-200 bg-slate-100 text-slate-600"
+            : "border-slate-200 bg-slate-50 focus:border-brand-600"
+        }`}
       />
     </label>
   );

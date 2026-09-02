@@ -231,7 +231,7 @@ export default async function ProductPage({ params }: PageProps) {
                     </span>
                     <span className="font-semibold text-emerald-700">In Stock</span>
                     <span className="text-slate-400">
-                      — {product.stock} available · ready to ship nationwide
+                      — {product.stock} available · ready to ship across Punjab
                     </span>
                   </>
                 ) : (
@@ -254,7 +254,7 @@ export default async function ProductPage({ params }: PageProps) {
 
             <ul className="mt-6 grid grid-cols-2 gap-3 text-xs">
               {[
-                "Delivery all across Pakistan",
+                "Delivery across Punjab",
                 "7-day replacement guarantee",
                 "Official brand warranty",
                 "Cash on delivery available",

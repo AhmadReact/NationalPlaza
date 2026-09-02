@@ -41,6 +41,8 @@ function splitValues(value: string): string[] {
     .filter(Boolean);
 }
 
+export const COLLECTION_PAGE_SIZE = 20;
+
 export function emptyCatalogQueryState(): CatalogQueryState {
   return {
     page: 1,
@@ -48,6 +50,26 @@ export function emptyCatalogQueryState(): CatalogQueryState {
     inStock: false,
     attrs: {},
   };
+}
+
+export type NextSearchParams = Record<string, string | string[] | undefined>;
+
+export function nextSearchParamsToURLSearchParams(
+  raw: NextSearchParams,
+): URLSearchParams {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(raw)) {
+    if (value == null || value === "") continue;
+    const values = Array.isArray(value) ? value : [value];
+    for (const item of values) {
+      if (item) searchParams.append(key, item);
+    }
+  }
+  return searchParams;
+}
+
+export function parseNextSearchParams(raw: NextSearchParams): CatalogQueryState {
+  return parseCatalogSearchParams(nextSearchParamsToURLSearchParams(raw));
 }
 
 export function parseCatalogSearchParams(
@@ -110,9 +132,10 @@ export function catalogStateToSearchParams(
 }
 
 export function catalogStatesEqual(
-  a: CatalogQueryState,
-  b: CatalogQueryState,
+  a: CatalogQueryState | null | undefined,
+  b: CatalogQueryState | null | undefined,
 ): boolean {
+  if (!a || !b) return a === b;
   return catalogStateToSearchParams(a).toString() === catalogStateToSearchParams(b).toString();
 }
 

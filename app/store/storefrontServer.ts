@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type {
   Category,
+  CategoryFiltersData,
   CategoryTreeNode,
 } from "@/app/admin/(panel)/categories/store/categoryAPI";
 import type {
@@ -69,6 +70,34 @@ export const fetchStoreCategoryBySlug = cache(
     return json?.data ?? null;
   },
 );
+
+export async function fetchStoreCategoryFilters(
+  slug: string,
+  params: Omit<Parameters<typeof toCatalogQueryString>[0], "search"> = {},
+): Promise<CategoryFiltersData | null> {
+  const json = await fetchJson<ApiMutationResponse<CategoryFiltersData>>(
+    `/categories/slug/${encodeURIComponent(slug)}/filters${toCatalogQueryString(params)}`,
+  );
+  const data = json?.data;
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    slug: data.slug,
+    category: data.category,
+    filters: Array.isArray(data.filters) ? data.filters : [],
+    price: data.price,
+  };
+}
+
+export async function fetchStoreProducts(
+  params: Parameters<typeof toCatalogQueryString>[0],
+): Promise<ApiListResponse<StoreProduct> | null> {
+  return fetchJson<ApiListResponse<StoreProduct>>(
+    `/products${toCatalogQueryString(params)}`,
+  );
+}
 
 export const fetchStoreCategoryTree = cache(
   async (): Promise<CategoryTreeNode[]> => {

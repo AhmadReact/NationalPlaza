@@ -62,7 +62,7 @@ const emptyShipping: GuestCheckoutAddressInput = {
   postalCode: "",
   phone: "",
   line2: "",
-  state: "",
+  state: "Punjab",
   country: "PK",
 };
 
@@ -85,11 +85,14 @@ function PhoneHint({ id }: { id?: string }) {
 
 function FieldLabel({
   required,
+  optional,
   children,
 }: {
   required?: boolean;
+  optional?: boolean;
   children: ReactNode;
 }) {
+  const showOptional = optional ?? !required;
   return (
     <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
       {children}
@@ -100,11 +103,11 @@ function FieldLabel({
           </span>
           <span className="sr-only"> (required)</span>
         </>
-      ) : (
+      ) : showOptional ? (
         <span className="ml-1 font-medium normal-case tracking-normal text-slate-400">
           (optional)
         </span>
-      )}
+      ) : null}
     </span>
   );
 }
@@ -180,6 +183,7 @@ export default function CheckoutPage() {
     city: "",
     postalCode: "",
     phone: "",
+    state: "Punjab",
     country: "PK",
     isDefault: true,
   });
@@ -278,7 +282,7 @@ export default function CheckoutPage() {
             phone:
               guestShipping.phone?.trim() || guestPhone.trim() || undefined,
             line2: guestShipping.line2?.trim() || undefined,
-            state: guestShipping.state?.trim() || undefined,
+            state: "Punjab",
             country: guestShipping.country?.trim() || "PK",
           },
           billingSameAsShipping: true,
@@ -375,6 +379,7 @@ export default function CheckoutPage() {
       const result = await createAddress({
         ...addressForm,
         phone: addressForm.phone?.trim(),
+        state: "Punjab",
       }).unwrap();
       dispatch(toast.success("Address saved"));
       setShippingAddressId(result.data.id);
@@ -446,7 +451,7 @@ export default function CheckoutPage() {
         postalCode: guestShipping.postalCode.trim(),
         phone: shippingPhone || undefined,
         line2: guestShipping.line2?.trim() || undefined,
-        state: guestShipping.state?.trim() || undefined,
+        state: "Punjab",
         country: guestShipping.country?.trim() || "PK",
       },
       billingSameAsShipping: true,
@@ -775,6 +780,9 @@ export default function CheckoutPage() {
                     </button>
                   )}
                 </div>
+                <p className="mt-1 text-sm text-slate-500">
+                  We currently deliver within Punjab only.
+                </p>
 
                 {isAuthenticated ? (
                   <>
@@ -905,7 +913,10 @@ export default function CheckoutPage() {
                         ["country", "Country (ISO)", false],
                       ] as const
                     ).map(([key, label, required]) => {
-                      const value = guestShipping[key] ?? "";
+                      const isLocked = key === "state";
+                      const value = isLocked
+                        ? "Punjab"
+                        : (guestShipping[key] ?? "");
                       const invalid =
                         key === "phone"
                           ? filledButInvalid(value, isValidCheckoutPhone)
@@ -920,21 +931,26 @@ export default function CheckoutPage() {
                         key={key}
                         className={`block ${key === "line1" || key === "line2" || key === "fullName" || key === "phone" ? "sm:col-span-2" : ""}`}
                       >
-                        <FieldLabel required={required}>{label}</FieldLabel>
+                        <FieldLabel required={required} optional={!required && !isLocked}>
+                          {label}
+                        </FieldLabel>
                         <input
                           required={required}
+                          readOnly={isLocked}
                           minLength={required && key !== "phone" ? 2 : undefined}
                           type={key === "phone" ? "tel" : "text"}
                           inputMode={key === "phone" ? "tel" : undefined}
                           autoComplete={key === "phone" ? "tel" : undefined}
                           value={value}
                           aria-invalid={invalid}
+                          aria-readonly={isLocked || undefined}
                           aria-describedby={
                             [invalid ? errorId : null, hintId]
                               .filter(Boolean)
                               .join(" ") || undefined
                           }
                           onChange={(e) => {
+                            if (isLocked) return;
                             const next = e.target.value;
                             if (key === "phone") {
                               setGuestShipping((prev) => ({
@@ -953,7 +969,11 @@ export default function CheckoutPage() {
                               [key]: next,
                             }));
                           }}
-                          className="mt-1 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-brand-600 aria-invalid:border-red-400"
+                          className={`mt-1 w-full rounded-xl border-2 px-3 py-2 text-sm outline-none aria-invalid:border-red-400 ${
+                            isLocked
+                              ? "cursor-default border-slate-200 bg-slate-100 text-slate-600"
+                              : "border-slate-200 bg-slate-50 focus:border-brand-600"
+                          }`}
                         />
                         {key === "phone" ? (
                           <PhoneHint id="guest-phone-hint" />
@@ -980,6 +1000,10 @@ export default function CheckoutPage() {
                   </span>
                   <span className="sr-only"> (required)</span>
                 </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Shipping is not free. Charges are confirmed by our team after
+                  you place the order.
+                </p>
                 {deliveryMethods.length === 0 ? (
                   <p className="mt-4 text-sm text-amber-800">
                     No delivery methods are available right now. Please try again

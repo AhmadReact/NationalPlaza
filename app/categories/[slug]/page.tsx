@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { CollectionClient } from "@/app/categories/[slug]/collection-client";
-import { fetchStoreCategoryBySlug } from "@/app/store/storefrontServer";
+import {
+  fetchStoreCategoryBySlug,
+  fetchStoreCategoryFilters,
+  fetchStoreProducts,
+} from "@/app/store/storefrontServer";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { JsonLd } from "@/components/json-ld";
+import {
+  COLLECTION_PAGE_SIZE,
+  catalogStateToApiParams,
+  parseNextSearchParams,
+} from "@/lib/catalog-query";
 import {
   buildBreadcrumbJsonLd,
   getSiteUrl,
@@ -15,6 +23,7 @@ import {
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export async function generateMetadata({
@@ -32,7 +41,7 @@ export async function generateMetadata({
 
   const description = truncateText(
     category.description ||
-      `Shop ${category.name} at National Electronics. Genuine branded products, nationwide delivery, cash on delivery, and official warranty.`,
+      `Shop ${category.name} at National Electronics. Genuine branded products, delivery across Punjab, cash on delivery, and official warranty.`,
     160,
   );
   const canonical = `/categories/${category.slug}`;
@@ -58,13 +67,40 @@ export async function generateMetadata({
   };
 }
 
-export default async function CategoryCollectionPage({ params }: PageProps) {
+export default async function CategoryCollectionPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { slug } = await params;
-  const category = await fetchStoreCategoryBySlug(slug);
+  const state = parseNextSearchParams(await searchParams);
+  const filterQuery = catalogStateToApiParams(state, { status: "ACTIVE" });
+  const filterParams = {
+    status: "ACTIVE" as const,
+    brandId: filterQuery.brandId,
+    inStock: filterQuery.inStock,
+    attrs: filterQuery.attrs,
+  };
+
+  const categoryPromise = fetchStoreCategoryBySlug(slug);
+  const filtersPromise = fetchStoreCategoryFilters(slug, filterParams).catch(
+    () => null,
+  );
+  const category = await categoryPromise;
 
   if (!category) {
     notFound();
   }
+
+  const [filters, productsResult] = await Promise.all([
+    filtersPromise,
+    fetchStoreProducts(
+      catalogStateToApiParams(state, {
+        categoryId: category.id,
+        status: "ACTIVE",
+        limit: COLLECTION_PAGE_SIZE,
+      }),
+    ).catch(() => null),
+  ]);
 
   const origin = getSiteUrl();
 
@@ -79,23 +115,14 @@ export default async function CategoryCollectionPage({ params }: PageProps) {
       />
       <Header />
       <main className="flex-1">
-        <Suspense
-          fallback={
-            <div className="mx-auto max-w-7xl px-4 py-10">
-              <div className="h-8 w-48 animate-pulse rounded bg-slate-200" />
-              <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="h-80 animate-pulse rounded-2xl bg-slate-100"
-                  />
-                ))}
-              </div>
-            </div>
-          }
-        >
-          <CollectionClient slug={slug} />
-        </Suspense>
+        <CollectionClient
+          slug={slug}
+          initialCategory={category}
+          initialProducts={productsResult?.data ?? []}
+          initialMeta={productsResult?.meta ?? null}
+          initialFilters={filters}
+          initialState={state}
+        />
       </main>
       <Footer />
     </>

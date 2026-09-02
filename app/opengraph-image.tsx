@@ -62,7 +62,7 @@ export default function Image() {
             Shop genuine home appliances across Pakistan
           </div>
           <div style={{ marginTop: 24, fontSize: 24, color: "rgba(255,255,255,0.78)" }}>
-            Official warranty · Nationwide delivery · Cash on delivery
+            Official warranty · Delivery across Punjab · Cash on delivery
           </div>
         </div>
       </div>

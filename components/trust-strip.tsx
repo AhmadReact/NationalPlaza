@@ -1,7 +1,7 @@
 const features = [
   {
-    title: "Delivery Across Pakistan",
-    text: "Fast, insured shipping to every city and town",
+    title: "Delivery Across Punjab",
+    text: "Paid shipping throughout Punjab. Charges confirmed at checkout",
     icon: (
       <path d="M1 8h15v12H1zM16 11h4l3 4v5h-7zM5.5 23a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18.5 23a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 4h10M6 1h10" />
     ),

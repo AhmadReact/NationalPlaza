@@ -75,7 +75,7 @@ export function Footer() {
             National Electronics is one of the oldest and most trusted home
             appliances &amp; electronics stores in Pakistan, serving families
             since 1946 with genuine branded products at the lowest prices,
-            reliable after-sales service and nationwide delivery.
+            reliable after-sales service and delivery across Punjab.
           </p>
           <ul className="mt-5 space-y-2 text-sm text-white/70">
             <li>
