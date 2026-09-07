@@ -3,7 +3,8 @@
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-sora), var(--font-geist-sans), ui-sans-serif, sans-serif;
+  --font-display:
+    var(--font-sora), var(--font-geist-sans), ui-sans-serif, sans-serif;
 
   /* Brand — deep navy blue */
   --color-brand-50: #eef4ff;

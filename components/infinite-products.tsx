@@ -182,7 +182,7 @@ export function InfiniteScrollSentinel({
   if (loading) {
     return (
       <div className="mt-8 flex flex-col gap-4" aria-busy="true">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <ProductCardSkeleton key={index} />
           ))}
@@ -218,7 +218,7 @@ export function InfiniteProductGrid({
 }) {
   return (
     <div
-      className={`grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 ${
+      className={`grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3 ${
         replacing ? "opacity-70" : ""
       }`}
     >

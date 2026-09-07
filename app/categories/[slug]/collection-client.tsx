@@ -436,7 +436,7 @@ function CollectionSkeleton() {
 
 function ProductGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
         <ProductCardSkeleton key={index} />
       ))}

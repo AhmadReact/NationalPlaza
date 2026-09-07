@@ -41,7 +41,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
           fallback={
             <div className="mx-auto max-w-7xl px-4 py-10">
               <div className="h-8 w-48 animate-pulse rounded bg-slate-200" />
-              <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, index) => (
                   <div
                     key={index}

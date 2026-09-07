@@ -2,6 +2,7 @@
 
 import { toHomeCardProduct } from "@/app/store/customerAPI";
 import { useLiveHomePage } from "@/app/store/useLiveHomePage";
+import { ProductCardSkeleton } from "@/components/product-card";
 import { ProductSection } from "@/components/product-section";
 
 const ACCENTS = ["brand", "emerald", "teal", "violet"] as const;
@@ -12,15 +13,12 @@ export function HomeProducts() {
 
   if (isLoading && sections.length === 0) {
     return (
-      <section className="py-12 sm:py-16">
+      <section className="py-8 sm:py-16">
         <div className="mx-auto max-w-7xl px-4">
-          <div className="h-8 w-48 animate-pulse rounded bg-slate-200" />
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="h-7 w-40 animate-pulse rounded bg-slate-200 sm:h-8 sm:w-48" />
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-5 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-slate-100"
-              />
+              <ProductCardSkeleton key={i} />
             ))}
           </div>
         </div>

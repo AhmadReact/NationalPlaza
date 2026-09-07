@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { addToCart } from "@/app/store/cartThunk";
 import { useAppDispatch } from "@/lib/store/hooks";
 
@@ -9,8 +9,8 @@ type AddToCartButtonProps = {
   quantity?: number;
   disabled?: boolean;
   className?: string;
-  idleLabel?: string;
-  successLabel?: string;
+  idleLabel?: ReactNode;
+  successLabel?: ReactNode;
 };
 
 export function AddToCartButton({

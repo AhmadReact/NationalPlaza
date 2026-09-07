@@ -32,10 +32,10 @@ const features = [
 export function TrustStrip() {
   return (
     <section id="why-us" className="scroll-mt-32 border-y border-slate-200 bg-white">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-8 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-3 gap-y-5 px-4 py-6 sm:gap-6 sm:py-8 lg:grid-cols-4">
         {features.map((feature) => (
-          <div key={feature.title} className="flex items-start gap-4">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700">
+          <div key={feature.title} className="flex items-start gap-2.5 sm:gap-4">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700 sm:size-12 sm:rounded-xl">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -43,14 +43,16 @@ export function TrustStrip() {
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-6 w-6"
+                className="size-5 sm:size-6"
               >
                 {feature.icon}
               </svg>
             </span>
-            <div>
-              <h3 className="text-sm font-bold text-brand-950">{feature.title}</h3>
-              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+            <div className="min-w-0">
+              <h3 className="text-[13px] font-bold leading-snug text-brand-950 sm:text-sm">
+                {feature.title}
+              </h3>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-pretty text-slate-500 sm:text-xs">
                 {feature.text}
               </p>
             </div>
