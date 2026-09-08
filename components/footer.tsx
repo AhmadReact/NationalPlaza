@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { FooterPopularCategories } from "@/components/footer-popular-categories";
 
 const columns = [
@@ -58,19 +59,9 @@ export function Footer() {
       {/* main columns */}
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-5">
         <div className="lg:col-span-2">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-700 to-brand-900 font-display text-lg font-extrabold text-gold-400">
-              N
-            </span>
-            <span className="leading-tight">
-              <span className="block font-display text-lg font-extrabold text-white">
-                National Electronics
-              </span>
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-500">
-                Trusted since 1946
-              </span>
-            </span>
-          </div>
+          <Link href="/" className="inline-flex max-w-full">
+            <BrandLogo onDark className="h-10 w-auto sm:h-12" />
+          </Link>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">
             National Electronics is one of the oldest and most trusted home
             appliances &amp; electronics stores in Pakistan, serving families

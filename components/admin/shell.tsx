@@ -9,6 +9,7 @@ import { getUserDisplayName } from "@/app/admin/login/store/loginAPI";
 import { visibleNavGroups } from "@/lib/admin-nav";
 import { AdminIcon } from "@/components/admin/icons";
 import { AdminPermissionGate } from "@/components/admin/permission-gate";
+import { BrandLogo } from "@/components/brand-logo";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 
 export function AdminShell({
@@ -74,18 +75,13 @@ export function AdminShell({
     <div className="flex min-h-dvh bg-[#f7f8fb]">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col self-start overflow-y-auto bg-brand-950 text-white lg:flex">
-        <div className="flex items-center gap-2.5 border-b border-white/10 px-5 py-5">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-700 to-brand-900 font-display text-lg font-extrabold text-gold-400">
-            N
-          </span>
-          <div className="leading-tight">
-            <p className="font-display text-sm font-extrabold tracking-tight">
-              National Electronics
-            </p>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold-400">
-              Admin
-            </p>
-          </div>
+        <div className="border-b border-white/10 px-4 py-4">
+          <Link href="/admin" className="block">
+            <BrandLogo onDark className="h-7 w-auto" />
+          </Link>
+          <p className="mt-2 px-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-gold-400">
+            Admin
+          </p>
         </div>
         {nav}
         <div className="border-t border-white/10 p-4">
@@ -111,10 +107,8 @@ export function AdminShell({
           />
           <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-brand-950 text-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-800 font-display font-extrabold text-gold-400">
-                  N
-                </span>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <BrandLogo onDark className="h-6 w-auto max-w-[9.5rem]" />
                 <span className="font-display text-sm font-bold">Admin</span>
               </div>
               <button

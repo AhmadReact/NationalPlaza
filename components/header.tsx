@@ -23,6 +23,7 @@ import {
   useGetStoreCategoryTreeQuery,
 } from "@/app/store/customerAPI";
 import { ApplianceArt } from "@/components/appliance-art";
+import { BrandLogo } from "@/components/brand-logo";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 
 const fallbackNavLinks = [
@@ -126,18 +127,11 @@ export function Header() {
             <MenuIcon className="h-6 w-6" />
           </button>
 
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-800 to-brand-950 font-display text-lg font-extrabold text-gold-400 shadow-md">
-              N
-            </span>
-            <span className="leading-tight">
-              <span className="block font-display text-lg font-extrabold tracking-tight text-brand-950 sm:text-xl">
-                National <span className="text-brand-600">Electronics</span>
-              </span>
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-600 sm:text-[11px]">
-                Trusted since 1946
-              </span>
-            </span>
+          <Link href="/" className="min-w-0 shrink">
+            <BrandLogo
+              preload
+              className="h-8 w-auto max-w-[min(13.5rem,48vw)] sm:h-10 sm:max-w-80 md:max-w-none"
+            />
           </Link>
 
           <div className="hidden flex-1 items-center md:flex">

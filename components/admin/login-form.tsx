@@ -10,6 +10,7 @@ import { setAdminSessionCookie } from "@/app/admin/actions";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { toast } from "@/lib/store/snackbarSlice";
 import { isStaff } from "@/lib/rbac";
+import { BrandLogo } from "@/components/brand-logo";
 
 type LoginFormValues = {
   email: string;
@@ -51,17 +52,10 @@ export function AdminLoginForm() {
 
       <div className="relative w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2.5">
-            <span className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-brand-700 to-brand-950 font-display text-xl font-extrabold text-gold-400 shadow-lg shadow-brand-950/40">
-              N
-            </span>
-            <span className="text-left leading-tight">
-              <span className="block font-display text-xl font-extrabold tracking-tight text-white">
-                National <span className="text-brand-200">Electronics</span>
-              </span>
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-400">
-                Admin Panel
-              </span>
+          <Link href="/" className="inline-flex flex-col items-center gap-3">
+            <BrandLogo onDark className="h-12 w-auto sm:h-14" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-400">
+              Admin Panel
             </span>
           </Link>
         </div>

@@ -62,7 +62,7 @@ export function buildSiteGraphJsonLd(origin: string) {
         "@id": `${origin}/#organization`,
         name: SITE_NAME,
         url: origin,
-        logo: `${origin}/icon.svg`,
+        logo: `${origin}/logo.png`,
         email: SITE_EMAIL,
         telephone: SITE_PHONE,
         foundingDate: "1946",
