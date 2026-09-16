@@ -16,7 +16,6 @@ import {
   type DeliveryMethod,
 } from "@/app/admin/(panel)/delivery-methods/store/deliveryAPI";
 import { getFetchErrorMessage } from "@/lib/api/errorMessage";
-import { formatPrice } from "@/lib/data";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { toast } from "@/lib/store/snackbarSlice";
 
@@ -27,6 +26,7 @@ type DeliveryFormState = {
   price: string;
   estimatedDaysMin: string;
   estimatedDaysMax: string;
+  quotesLiveRates: boolean;
   isActive: boolean;
   sortOrder: string;
 };
@@ -40,6 +40,7 @@ const emptyForm: DeliveryFormState = {
   price: "0",
   estimatedDaysMin: "",
   estimatedDaysMax: "",
+  quotesLiveRates: false,
   isActive: true,
   sortOrder: "0",
 };
@@ -144,6 +145,7 @@ export default function AdminDeliveryMethodsPage() {
         method.estimatedDaysMin == null ? "" : String(method.estimatedDaysMin),
       estimatedDaysMax:
         method.estimatedDaysMax == null ? "" : String(method.estimatedDaysMax),
+      quotesLiveRates: method.quotesLiveRates === true,
       isActive: method.isActive,
       sortOrder: String(method.sortOrder ?? 0),
     });
@@ -220,6 +222,7 @@ export default function AdminDeliveryMethodsPage() {
           description: form.description.trim() || undefined,
           estimatedDaysMin: estimatedDaysMin ?? undefined,
           estimatedDaysMax: estimatedDaysMax ?? undefined,
+          quotesLiveRates: form.quotesLiveRates,
           isActive: form.isActive,
           sortOrder,
         }).unwrap();
@@ -234,6 +237,7 @@ export default function AdminDeliveryMethodsPage() {
           price,
           estimatedDaysMin,
           estimatedDaysMax,
+          quotesLiveRates: form.quotesLiveRates,
           isActive: form.isActive,
           sortOrder,
         }).unwrap();
@@ -269,7 +273,7 @@ export default function AdminDeliveryMethodsPage() {
     <>
       <AdminPageHeader
         title="Delivery"
-        description="Shipping methods and estimated delivery times offered at checkout. Shipping is quoted when staff confirm an order."
+        description="Shipping methods offered at checkout. Live-rate couriers quote at checkout; others are confirmed by staff. Catalog price is not the customer shipping fee."
         action={
           <AdminPrimaryButton onClick={openCreate}>
             Add method
@@ -334,7 +338,7 @@ export default function AdminDeliveryMethodsPage() {
             columns={[
               "Method",
               "Code",
-              "Price",
+              "Quotes",
               "ETA",
               "Order",
               "Status",
@@ -352,7 +356,7 @@ export default function AdminDeliveryMethodsPage() {
               <span key={`${method.id}-code`} className="font-mono text-xs">
                 {method.code}
               </span>,
-              method.price === 0 ? "Free" : formatPrice(method.price),
+              method.quotesLiveRates ? "Live tariff" : "Quoted later",
               formatEta(method.estimatedDaysMin, method.estimatedDaysMax),
               String(method.sortOrder ?? 0),
               <StatusPill
@@ -477,10 +481,9 @@ export default function AdminDeliveryMethodsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Price (Rs.) *
+                    Catalog price (Rs.)
                   </span>
                   <input
-                    required
                     type="number"
                     min={0}
                     step="0.01"
@@ -491,6 +494,9 @@ export default function AdminDeliveryMethodsPage() {
                     className="w-full rounded-xl border-2 border-brand-900/10 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-600"
                     placeholder="0"
                   />
+                  <span className="mt-1 block text-xs text-slate-500">
+                    Not shown as the customer shipping fee at checkout.
+                  </span>
                 </label>
 
                 <label className="block">
@@ -553,6 +559,21 @@ export default function AdminDeliveryMethodsPage() {
                   />
                 </label>
               </div>
+
+              <label className="flex items-center gap-2 text-sm text-brand-950">
+                <input
+                  type="checkbox"
+                  checked={form.quotesLiveRates}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      quotesLiveRates: e.target.checked,
+                    }))
+                  }
+                  className="rounded border-slate-300"
+                />
+                Quotes live courier rates at checkout
+              </label>
 
               <label className="flex items-center gap-2 text-sm text-brand-950">
                 <input

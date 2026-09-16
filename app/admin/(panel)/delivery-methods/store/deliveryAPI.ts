@@ -9,6 +9,7 @@ export type DeliveryMethod = {
   price: number;
   estimatedDaysMin: number | null;
   estimatedDaysMax: number | null;
+  quotesLiveRates?: boolean;
   isActive: boolean;
   sortOrder: number;
   createdAt?: string;
@@ -22,6 +23,7 @@ export type CreateDeliveryMethodInput = {
   description?: string;
   estimatedDaysMin?: number;
   estimatedDaysMax?: number;
+  quotesLiveRates?: boolean;
   isActive?: boolean;
   sortOrder?: number;
 };
@@ -33,6 +35,7 @@ export type UpdateDeliveryMethodInput = {
   price?: number;
   estimatedDaysMin?: number | null;
   estimatedDaysMax?: number | null;
+  quotesLiveRates?: boolean;
   isActive?: boolean;
   sortOrder?: number;
 };

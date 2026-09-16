@@ -192,8 +192,9 @@ export default function OrderClient({ id }: { id: string }) {
                     <span className="font-extrabold">{order.orderNumber}</span>
                   </p>
                   <p className="mt-1 text-sm text-emerald-800">
-                    A representative will call with shipping charges for delivery
-                    within Punjab.
+                    {shippingPending
+                      ? "Our representative will tell you the shipping charges."
+                      : `Shipping ${formatPrice(order.shippingAmount)} is included in your total.`}
                   </p>
                 </div>
               )}

@@ -16,7 +16,19 @@ export const ORDER_STATUSES: OrderStatus[] = [
 ];
 
 export const DEFAULT_SHIPPING_MESSAGE =
-  "Our representative will confirm shipping charges for delivery within Punjab.";
+  "Our representative will tell you the shipping charges.";
+
+export const CHECKOUT_SHIPPING_HINT = "Shipping is calculated at checkout.";
+
+export const LIVE_RATES_CITY_HINT =
+  "Enter a real Pakistan city name (for example Lahore or Karachi) so we can quote shipping.";
+
+export const PENDING_COURIER_NOTE =
+  "Typically cheaper than live-rate couriers.";
+
+export const PENDING_COURIER_CARD_NOTE = "Typically cheaper. No live fee.";
+
+export const LIVE_RATES_CARD_NOTE = "Live shipping once city is set.";
 
 export const CUSTOMER_STATUS_LABEL: Record<OrderStatus, string> = {
   PENDING: "Pending",
@@ -55,11 +67,48 @@ export function canCustomerCancel(status: string): boolean {
   return status === "PENDING" || status === "CONFIRMED";
 }
 
+export function methodQuotesLiveRates(method: {
+  quotesLiveRates?: boolean;
+}): boolean {
+  return method.quotesLiveRates === true;
+}
+
+export function pickDefaultDeliveryMethodId<
+  T extends { id: string; code?: string; quotesLiveRates?: boolean },
+>(methods: T[]): string {
+  if (methods.length === 0) return "";
+  const preferred =
+    methods.find((method) => method.code === "A_TO_Z") ??
+    methods.find((method) => !methodQuotesLiveRates(method));
+  return (preferred ?? methods[0]).id;
+}
+
+export function isCheckoutShippingPending(preview: {
+  quotesLiveRates?: boolean;
+  shippingPending?: boolean;
+}): boolean {
+  return preview.quotesLiveRates === false || preview.shippingPending === true;
+}
+
+export function orderNeedsShippingQuoteOnConfirm(order: {
+  shippingPending?: boolean;
+  shippingAmount?: number;
+}): boolean {
+  if (order.shippingPending === true) return true;
+  return !(typeof order.shippingAmount === "number" && order.shippingAmount > 0);
+}
+
 export function isShippingPending(order: {
   shippingPending?: boolean;
+  shippingAmount?: number;
   status?: string;
 }): boolean {
-  return order.shippingPending === true || order.status === "PENDING";
+  if (order.shippingPending === true) return true;
+  if (order.shippingPending === false) return false;
+  if (typeof order.shippingAmount === "number") {
+    return order.shippingAmount === 0 && order.status === "PENDING";
+  }
+  return order.status === "PENDING";
 }
 
 export function checkoutShippingCopy(preview: {
@@ -73,7 +122,7 @@ export function pendingShippingCopy(order: {
   shippingMessage?: string | null;
 }): string {
   const message = order.shippingMessage?.trim();
-  return message || "To be confirmed";
+  return message || "Pending";
 }
 
 export function parseShippingAmount(value: string): number | null {

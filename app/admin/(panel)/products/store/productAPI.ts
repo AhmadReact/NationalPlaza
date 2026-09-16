@@ -79,6 +79,7 @@ export type Product = {
   thumbnail: ProductImage | null;
   specifications: ProductSpecification[];
   attributeValues?: ProductAttributeValue[];
+  weightGrams?: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -103,6 +104,7 @@ export type CreateProductInput = {
   lowStock?: number;
   isFeatured?: boolean;
   status?: ProductStatus;
+  weightGrams?: number;
   attributeValues?: ProductAttributeWrite[];
 };
 
@@ -122,6 +124,7 @@ export type UpdateProductInput = {
   lowStock?: number;
   isFeatured?: boolean;
   status?: ProductStatus;
+  weightGrams?: number | null;
   attributeValues?: ProductAttributeWrite[];
 };
 

@@ -65,6 +65,7 @@ type ProductFormState = {
   lowStock: string;
   isFeatured: boolean;
   status: ProductStatus;
+  weightGrams: string;
   images: File[];
   specs: SpecRow[];
   attributeValues: Record<string, string[]>;
@@ -85,6 +86,7 @@ const emptyForm: ProductFormState = {
   lowStock: "5",
   isFeatured: false,
   status: "ACTIVE",
+  weightGrams: "",
   images: [],
   specs: [],
   attributeValues: {},
@@ -385,6 +387,8 @@ export default function AdminProductsPage() {
       lowStock: String(product.lowStock ?? 5),
       isFeatured: product.isFeatured,
       status: product.status || "ACTIVE",
+      weightGrams:
+        product.weightGrams != null ? String(product.weightGrams) : "",
       images: [],
       specs: [],
       attributeValues: selectionsFromAttributeValues(product.attributeValues),
@@ -510,6 +514,14 @@ export default function AdminProductsPage() {
       return "Low stock threshold must be an integer ≥ 0.";
     }
 
+    const weightGrams = form.weightGrams.trim();
+    if (weightGrams) {
+      const parsed = Number(weightGrams);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        return "Parcel weight must be an integer ≥ 1 gram.";
+      }
+    }
+
     if (form.images.length > MAX_UPLOAD_FILES) {
       return `You can upload at most ${MAX_UPLOAD_FILES} images at a time.`;
     }
@@ -553,6 +565,10 @@ export default function AdminProductsPage() {
     const costPrice = parseOptionalNumber(form.costPrice);
     const stock = Number(form.stock);
     const lowStock = Number(form.lowStock);
+    const weightGramsTrimmed = form.weightGrams.trim();
+    const weightGrams = weightGramsTrimmed
+      ? Number(weightGramsTrimmed)
+      : undefined;
     const attributeValues = toAttributeWritePayload(form.attributeValues);
 
     try {
@@ -572,6 +588,7 @@ export default function AdminProductsPage() {
           lowStock,
           isFeatured: form.isFeatured,
           status: form.status,
+          weightGrams,
           attributeValues,
         }).unwrap();
 
@@ -629,6 +646,7 @@ export default function AdminProductsPage() {
           lowStock,
           isFeatured: form.isFeatured,
           status: form.status,
+          weightGrams: weightGramsTrimmed ? Number(weightGramsTrimmed) : null,
           attributeValues,
         }).unwrap();
 
@@ -1432,6 +1450,30 @@ export default function AdminProductsPage() {
                     }
                     className="w-full rounded-xl border-2 border-brand-900/10 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-600"
                   />
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Weight (grams)
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.weightGrams}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        weightGrams: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border-2 border-brand-900/10 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-600"
+                    placeholder="500"
+                  />
+                  <span className="mt-1 block text-xs text-slate-500">
+                    Parcel weight for courier quotes. Optional — if omitted, the
+                    backend uses 500 g.
+                  </span>
                 </label>
 
                 <label className="block">

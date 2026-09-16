@@ -11,7 +11,7 @@ import {
 import { selectCart, selectCartStatus } from "@/app/store/cartSlice";
 import { selectCustomerIsAuthenticated } from "@/app/store/customerAuthSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
-import { DEFAULT_SHIPPING_MESSAGE } from "@/lib/order/status";
+import { CHECKOUT_SHIPPING_HINT } from "@/lib/order/status";
 import { useEffect } from "react";
 
 export function CartView() {
@@ -167,7 +167,7 @@ export function CartView() {
               </span>
             </div>
             <p className="mt-3 text-xs text-slate-500">
-              {DEFAULT_SHIPPING_MESSAGE}
+              {CHECKOUT_SHIPPING_HINT}
             </p>
             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-sm">
               <span className="font-bold text-brand-950">Total</span>

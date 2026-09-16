@@ -23,6 +23,7 @@ import { clientApiUrl } from "@/lib/api/clientBase";
 import { formatPrice } from "@/lib/data";
 import {
   isShippingPending,
+  orderNeedsShippingQuoteOnConfirm,
   parseShippingAmount,
   pendingShippingCopy,
 } from "@/lib/order/status";
@@ -198,6 +199,9 @@ function AdminOrdersPageInner() {
 
   const selectedStatus = (statusDraft || order?.status) as OrderStatus | "";
   const showShippedForm = selectedStatus === "SHIPPED";
+  const needsShippingQuoteOnConfirm = Boolean(
+    order && orderNeedsShippingQuoteOnConfirm(order),
+  );
   const showConfirmShippingForm = Boolean(
     order &&
       order.status === "PENDING" &&
@@ -261,6 +265,7 @@ function AdminOrdersPageInner() {
     if (
       nextStatus === "CONFIRMED" &&
       order.status !== "CONFIRMED" &&
+      orderNeedsShippingQuoteOnConfirm(order) &&
       typeof extras?.shippingAmount !== "number"
     ) {
       dispatch(
@@ -361,6 +366,24 @@ function AdminOrdersPageInner() {
 
   function submitConfirmed() {
     if (!order) return;
+    if (!orderNeedsShippingQuoteOnConfirm(order)) {
+      const override = shippingAmountDraft.trim();
+      if (!override) {
+        void applyStatus("CONFIRMED");
+        return;
+      }
+      const shippingAmount = parseShippingAmount(shippingAmountDraft);
+      if (shippingAmount === null) {
+        dispatch(
+          toast.error(
+            "Enter a shipping amount (0 or more, up to 2 decimal places) to overwrite.",
+          ),
+        );
+        return;
+      }
+      void applyStatus("CONFIRMED", { shippingAmount });
+      return;
+    }
     const shippingAmount = parseShippingAmount(shippingAmountDraft);
     if (shippingAmount === null) {
       dispatch(
@@ -758,24 +781,53 @@ function AdminOrdersPageInner() {
                       <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Confirm order
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Enter the quoted shipping amount from the confirmation
-                        call. 0 is allowed for free shipping.
-                      </p>
-                      <label className="mt-3 block">
-                        <span className="text-xs font-semibold text-slate-600">
-                          Shipping amount *
-                        </span>
-                        <input
-                          inputMode="decimal"
-                          value={shippingAmountDraft}
-                          onChange={(e) =>
-                            setShippingAmountDraft(e.target.value)
-                          }
-                          placeholder="250.00"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
-                        />
-                      </label>
+                      {needsShippingQuoteOnConfirm ? (
+                        <>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Enter the quoted shipping amount from the confirmation
+                            call. 0 is allowed for free shipping.
+                          </p>
+                          <label className="mt-3 block">
+                            <span className="text-xs font-semibold text-slate-600">
+                              Shipping amount *
+                            </span>
+                            <input
+                              inputMode="decimal"
+                              value={shippingAmountDraft}
+                              onChange={(e) =>
+                                setShippingAmountDraft(e.target.value)
+                              }
+                              placeholder="250.00"
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
+                            />
+                          </label>
+                        </>
+                      ) : (
+                        <>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Live courier shipping is already quoted. Confirm
+                            without changing it, or enter a new amount to
+                            overwrite.
+                          </p>
+                          <p className="mt-3 text-sm font-semibold text-brand-950">
+                            Quoted shipping: {formatPrice(order.shippingAmount)}
+                          </p>
+                          <label className="mt-3 block">
+                            <span className="text-xs font-semibold text-slate-600">
+                              Override shipping amount
+                            </span>
+                            <input
+                              inputMode="decimal"
+                              value={shippingAmountDraft}
+                              onChange={(e) =>
+                                setShippingAmountDraft(e.target.value)
+                              }
+                              placeholder="Leave blank to keep quoted amount"
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
+                            />
+                          </label>
+                        </>
+                      )}
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <button
                           type="button"

@@ -13,7 +13,18 @@ export type DeliveryMethod = {
   price: number;
   estimatedDaysMin: number | null;
   estimatedDaysMax: number | null;
+  quotesLiveRates?: boolean;
   isActive: boolean;
+  sortOrder?: number;
+};
+
+export type ShippingBreakdown = {
+  shipmentCharges: number;
+  cashHandling: number;
+  insuranceCharges: number;
+  gstAmount: number;
+  fuelSurchargeAmount: number;
+  total: number;
 };
 
 export type CheckoutAddressSnapshot = {
@@ -42,9 +53,12 @@ export type CheckoutPreview = {
   couponCode: string | null;
   discountAmount: number;
   deliveryMethodName: string;
+  deliveryMethodCode?: string;
+  quotesLiveRates?: boolean;
   shippingAmount: number;
   shippingPending: boolean;
-  shippingMessage: string;
+  shippingMessage: string | null;
+  shippingBreakdown?: ShippingBreakdown;
   taxRate: number;
   taxAmount: number;
   taxableAmount: number;

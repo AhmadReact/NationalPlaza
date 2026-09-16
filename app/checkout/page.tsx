@@ -20,6 +20,7 @@ import {
   type CheckoutInput,
   type CheckoutOtpResult,
   type CheckoutPreview,
+  type DeliveryMethod,
   type GuestCheckoutAddressInput,
   type GuestCheckoutInput,
   type PlaceOrderResult,
@@ -48,6 +49,13 @@ import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import {
   checkoutShippingCopy,
   formatDeliveryEta,
+  isCheckoutShippingPending,
+  LIVE_RATES_CARD_NOTE,
+  LIVE_RATES_CITY_HINT,
+  methodQuotesLiveRates,
+  PENDING_COURIER_CARD_NOTE,
+  PENDING_COURIER_NOTE,
+  pickDefaultDeliveryMethodId,
 } from "@/lib/order/status";
 import {
   filledButInvalid,
@@ -161,7 +169,12 @@ export default function CheckoutPage() {
   const [validateCoupon] = useValidateCouponMutation();
 
   const addresses = addressesData?.data ?? [];
-  const deliveryMethods = (deliveryData?.data ?? []).filter((d) => d.isActive);
+  const deliveryMethods = useMemo(() => {
+    return (deliveryData?.data ?? [])
+      .filter((method) => method.isActive)
+      .slice()
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [deliveryData?.data]);
 
   const [shippingAddressId, setShippingAddressId] = useState("");
   const [deliveryMethodId, setDeliveryMethodId] = useState("");
@@ -169,6 +182,7 @@ export default function CheckoutPage() {
   const [couponApplied, setCouponApplied] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
+  const [previewForKey, setPreviewForKey] = useState("");
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
 
@@ -221,7 +235,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!deliveryMethodId && deliveryMethods.length > 0) {
-      setDeliveryMethodId(deliveryMethods[0].id);
+      setDeliveryMethodId(pickDefaultDeliveryMethodId(deliveryMethods));
     }
   }, [deliveryMethods, deliveryMethodId]);
 
@@ -240,12 +254,28 @@ export default function CheckoutPage() {
 
   const canPreview = canPreviewCustomer || canPreviewGuest;
 
+  const checkoutPreviewKey = [
+    isAuthenticated ? "c" : "g",
+    deliveryMethodId,
+    shippingAddressId,
+    couponApplied ?? "",
+    guestEmail.trim(),
+    guestPhone.trim(),
+    guestShipping.fullName.trim(),
+    guestShipping.line1.trim(),
+    guestShipping.city.trim(),
+    guestShipping.postalCode.trim(),
+    guestShipping.phone?.trim() ?? "",
+    notes.trim(),
+  ].join("\0");
+
   useEffect(() => {
     if (!canPreview) return;
 
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
+        if (!cancelled) setPreviewError(null);
         if (isAuthenticated) {
           const result = await previewCheckout({
             shippingAddressId,
@@ -256,6 +286,7 @@ export default function CheckoutPage() {
           }).unwrap();
           if (!cancelled) {
             setPreview(result.data);
+            setPreviewForKey(checkoutPreviewKey);
             setPreviewError(null);
           }
           return;
@@ -293,15 +324,17 @@ export default function CheckoutPage() {
 
         if (!cancelled) {
           setPreview(result.data);
+          setPreviewForKey(checkoutPreviewKey);
           setPreviewError(null);
         }
       } catch (error) {
         if (!cancelled) {
           setPreview(null);
+          setPreviewForKey("");
           setPreviewError(
             getFetchErrorMessage(
               error as { status?: number | string; data?: unknown },
-              "Could not preview totals.",
+              "Could not preview totals. Choose another courier or a serviceable city.",
             ),
           );
         }
@@ -322,6 +355,7 @@ export default function CheckoutPage() {
     guestEmail,
     guestPhone,
     guestShipping,
+    checkoutPreviewKey,
     previewCheckout,
     previewGuestCheckout,
   ]);
@@ -330,6 +364,22 @@ export default function CheckoutPage() {
   const selectedAddressPhoneOk = Boolean(
     selectedAddress && isValidCheckoutPhone(selectedAddress.phone ?? ""),
   );
+  const selectedMethod: DeliveryMethod | undefined = deliveryMethods.find(
+    (method) => method.id === deliveryMethodId,
+  );
+  const selectedQuotesLive = methodQuotesLiveRates(selectedMethod ?? {});
+  const previewIsCurrent = Boolean(
+    preview && previewForKey === checkoutPreviewKey && !previewError,
+  );
+  const shippingQuoteWaiting = Boolean(
+    canPreview && !previewIsCurrent && !previewError,
+  );
+
+  const selectDeliveryMethod = (methodId: string) => {
+    if (methodId === deliveryMethodId) return;
+    setDeliveryMethodId(methodId);
+    setPreviewError(null);
+  };
 
   const checkoutBlockers = useMemo(
     () =>
@@ -358,6 +408,8 @@ export default function CheckoutPage() {
 
   const canPlaceOrder = Boolean(
     preview &&
+      previewForKey === checkoutPreviewKey &&
+      !previewLoading &&
       !placing &&
       !sendingOtp &&
       !otpOpen &&
@@ -597,15 +649,14 @@ export default function CheckoutPage() {
   const loadingGate = deliveryLoading || (isAuthenticated && addressesLoading);
 
   const summaryRows = useMemo(() => {
-    if (!preview) return [];
+    if (!previewIsCurrent || !preview) return [];
     const rows: Array<{
       label: string;
       value: string;
       hint?: string;
       pending?: boolean;
-    }> = [
-      { label: "Subtotal", value: formatPrice(preview.subtotal) },
-    ];
+      shipping?: boolean;
+    }> = [{ label: "Subtotal", value: formatPrice(preview.subtotal) }];
     if (preview.discountAmount > 0) {
       rows.push({
         label: `Discount${preview.couponCode ? ` (${preview.couponCode})` : ""}`,
@@ -618,16 +669,18 @@ export default function CheckoutPage() {
         value: formatPrice(preview.taxAmount),
       });
     }
+    const pending = isCheckoutShippingPending(preview) || !selectedQuotesLive;
     rows.push({
       label: preview.deliveryMethodName
         ? `Shipping (${preview.deliveryMethodName})`
         : "Shipping",
-      value: "To be confirmed",
-      hint: checkoutShippingCopy(preview),
-      pending: true,
+      value: pending ? "Pending" : formatPrice(preview.shippingAmount),
+      hint: pending ? checkoutShippingCopy(preview) : undefined,
+      pending,
+      shipping: true,
     });
     return rows;
-  }, [preview]);
+  }, [preview, previewIsCurrent, selectedQuotesLive]);
 
   if (loadingGate) {
     return (
@@ -925,7 +978,11 @@ export default function CheckoutPage() {
                             : false;
                       const errorId = `guest-${key}-error`;
                       const hintId =
-                        key === "phone" ? "guest-phone-hint" : undefined;
+                        key === "phone"
+                          ? "guest-phone-hint"
+                          : key === "city" && selectedQuotesLive
+                            ? "guest-city-hint"
+                            : undefined;
                       return (
                       <label
                         key={key}
@@ -978,6 +1035,14 @@ export default function CheckoutPage() {
                         {key === "phone" ? (
                           <PhoneHint id="guest-phone-hint" />
                         ) : null}
+                        {key === "city" && selectedQuotesLive ? (
+                          <span
+                            id="guest-city-hint"
+                            className="mt-1 block text-xs text-slate-500"
+                          >
+                            {LIVE_RATES_CITY_HINT}
+                          </span>
+                        ) : null}
                         <FieldError id={errorId}>
                           {key === "phone" && invalid
                             ? "Use 03XXXXXXXXX, +92…, or 92…."
@@ -1000,10 +1065,33 @@ export default function CheckoutPage() {
                   </span>
                   <span className="sr-only"> (required)</span>
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Shipping is not free. Charges are confirmed by our team after
-                  you place the order.
-                </p>
+                {selectedQuotesLive ? (
+                  <div className="mt-1 text-sm">
+                    {previewError ? (
+                      <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-red-700">
+                        {previewError}
+                      </p>
+                    ) : shippingQuoteWaiting ||
+                      (previewLoading && !previewIsCurrent) ? (
+                      <p className="text-slate-500">Getting live shipping…</p>
+                    ) : previewIsCurrent && preview ? (
+                      <p className="font-semibold text-brand-950">
+                        Shipping {formatPrice(preview.shippingAmount)}
+                      </p>
+                    ) : (
+                      <p className="text-slate-500">
+                        Live shipping appears once city and this courier are set.
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-slate-500">
+                      {LIVE_RATES_CITY_HINT}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-slate-500">
+                    {checkoutShippingCopy(previewIsCurrent && preview ? preview : {})}
+                  </p>
+                )}
                 {deliveryMethods.length === 0 ? (
                   <p className="mt-4 text-sm text-amber-800">
                     No delivery methods are available right now. Please try again
@@ -1016,6 +1104,7 @@ export default function CheckoutPage() {
                       method.estimatedDaysMin,
                       method.estimatedDaysMax,
                     );
+                    const live = methodQuotesLiveRates(method);
                     return (
                       <li key={method.id}>
                         <label className="flex cursor-pointer gap-3 rounded-2xl border-2 border-slate-200 p-4 has-[:checked]:border-brand-700">
@@ -1023,7 +1112,7 @@ export default function CheckoutPage() {
                             type="radio"
                             name="deliveryMethod"
                             checked={deliveryMethodId === method.id}
-                            onChange={() => setDeliveryMethodId(method.id)}
+                            onChange={() => selectDeliveryMethod(method.id)}
                             className="mt-1"
                           />
                           <span className="flex-1 text-sm">
@@ -1037,11 +1126,16 @@ export default function CheckoutPage() {
                                 </span>
                               ) : null}
                             </span>
-                            {method.description && (
+                            {method.description ? (
                               <span className="mt-1 block text-slate-500">
                                 {method.description}
                               </span>
-                            )}
+                            ) : null}
+                            <span className="mt-1 block text-xs text-slate-500">
+                              {live
+                                ? LIVE_RATES_CARD_NOTE
+                                : PENDING_COURIER_CARD_NOTE}
+                            </span>
                           </span>
                         </label>
                       </li>
@@ -1134,9 +1228,6 @@ export default function CheckoutPage() {
                 ))}
               </ul>
 
-              {previewLoading && (
-                <p className="mt-4 text-sm text-slate-400">Updating totals…</p>
-              )}
               {previewError && (
                 <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                   {previewError}
@@ -1147,11 +1238,15 @@ export default function CheckoutPage() {
                 <div className="flex justify-between gap-3">
                   <dt className="text-slate-500">Subtotal</dt>
                   <dd className="font-semibold text-brand-950">
-                    {formatPrice(preview?.subtotal ?? cart?.subtotal ?? 0)}
+                    {formatPrice(
+                      (previewIsCurrent ? preview?.subtotal : undefined) ??
+                        cart?.subtotal ??
+                        0,
+                    )}
                   </dd>
                 </div>
 
-                {preview ? (
+                {previewIsCurrent && preview ? (
                   <>
                     {summaryRows
                       .filter((row) => row.label !== "Subtotal")
@@ -1166,12 +1261,30 @@ export default function CheckoutPage() {
                                   : "text-brand-950"
                               }`}
                             >
-                              {row.value}
+                              {row.shipping &&
+                              previewLoading &&
+                              selectedQuotesLive &&
+                              !row.pending ? (
+                                <span className="inline-flex items-center gap-2">
+                                  {row.value}
+                                  <span
+                                    className="size-3 animate-spin rounded-full border-2 border-slate-300 border-t-brand-700"
+                                    aria-hidden="true"
+                                  />
+                                </span>
+                              ) : (
+                                row.value
+                              )}
                             </dd>
                           </div>
                           {row.hint ? (
                             <p className="mt-1 text-xs text-slate-500">
                               {row.hint}
+                            </p>
+                          ) : null}
+                          {row.shipping && row.pending ? (
+                            <p className="mt-0.5 text-xs text-slate-400">
+                              {PENDING_COURIER_NOTE}
                             </p>
                           ) : null}
                         </div>
@@ -1184,13 +1297,57 @@ export default function CheckoutPage() {
                     </div>
                   </>
                 ) : (
-                  !previewError && (
-                    <p className="pt-1 text-xs text-slate-400">
-                      {checkoutBlockers.length > 0
-                        ? `Complete ${checkoutBlockers.length === 1 ? "this required field" : "these required fields"} to see tax and totals.`
-                        : "Totals will appear once the form is complete."}
-                    </p>
-                  )
+                  <>
+                    <div>
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-slate-500">
+                          Shipping
+                          {selectedMethod?.name
+                            ? ` (${selectedMethod.name})`
+                            : ""}
+                        </dt>
+                        <dd className="font-semibold text-slate-600">
+                          {!selectedQuotesLive ? (
+                            "Pending"
+                          ) : shippingQuoteWaiting || previewLoading ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span
+                                className="size-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-brand-700"
+                                aria-hidden="true"
+                              />
+                              <span>Quoting…</span>
+                            </span>
+                          ) : previewError ? (
+                            "—"
+                          ) : (
+                            "—"
+                          )}
+                        </dd>
+                      </div>
+                      {!selectedQuotesLive ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {checkoutShippingCopy({})}
+                        </p>
+                      ) : null}
+                    </div>
+                    {previewLoading && checkoutBlockers.length === 0 ? (
+                      <p className="pt-1 text-xs text-slate-400">
+                        Updating totals…
+                      </p>
+                    ) : !previewError && checkoutBlockers.length > 0 ? (
+                      <p className="pt-1 text-xs text-slate-400">
+                        Complete{" "}
+                        {checkoutBlockers.length === 1
+                          ? "this required field"
+                          : "these required fields"}{" "}
+                        to see tax and totals.
+                      </p>
+                    ) : !previewError && !previewLoading ? (
+                      <p className="pt-1 text-xs text-slate-400">
+                        Totals will appear once the form is complete.
+                      </p>
+                    ) : null}
+                  </>
                 )}
               </dl>
 
@@ -1219,6 +1376,8 @@ export default function CheckoutPage() {
                   className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950"
                 >
                   {previewLoading && checkoutBlockers.length === 0 ? (
+                    <p>Calculating totals… Place order will enable in a moment.</p>
+                  ) : shippingQuoteWaiting && checkoutBlockers.length === 0 ? (
                     <p>Calculating totals… Place order will enable in a moment.</p>
                   ) : checkoutBlockers.length > 0 ? (
                     <>
