@@ -12,8 +12,9 @@ export function WhatsAppSettingsCard() {
     <div className="mt-5 rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-4">
       <p className="text-sm font-semibold text-brand-950">WhatsApp</p>
       <p className="mt-1 text-sm text-brand-900">
-        Check Cloud API configuration and send a session test. Order messages
-        are sent by the backend.
+        Check Cloud API configuration, manage staff numbers that get new-order
+        alerts, and send a session test. Order messages are sent by the
+        backend.
       </p>
       <Link
         href="/admin/whatsapp"

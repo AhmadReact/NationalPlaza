@@ -71,11 +71,40 @@ export type PaginationMeta = {
   hasPreviousPage: boolean;
 };
 
+export type WhatsAppAdminRecipient = {
+  id: string;
+  phoneNumber: string;
+  label: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateWhatsAppAdminRecipientRequest = {
+  phoneNumber: string;
+  label?: string;
+  isActive?: boolean;
+};
+
+export type UpdateWhatsAppAdminRecipientRequest = {
+  phoneNumber?: string;
+  label?: string;
+  isActive?: boolean;
+};
+
 export type ApiResponse<T> = {
   success: boolean;
   message: string;
   data: T;
   errors: unknown;
+  meta: unknown;
+};
+
+export type ApiEnvelope<T> = {
+  success: boolean;
+  message: string;
+  data: T | null;
+  errors: Array<{ field?: string; message: string; code?: string }> | null;
   meta: unknown;
 };
 
@@ -121,7 +150,7 @@ export const DEFAULT_WHATSAPP_TEST_MESSAGE =
 export const whatsappApi = createApi({
   reducerPath: "whatsappApi",
   baseQuery: baseQueryWithInterceptor,
-  tagTypes: ["WhatsAppHealth", "WhatsAppNotification"],
+  tagTypes: ["WhatsAppHealth", "WhatsAppNotification", "WhatsAppRecipient"],
   endpoints: (builder) => ({
     getWhatsAppHealth: builder.query<ApiResponse<WhatsAppHealth>, void>({
       query: () => ({
@@ -181,6 +210,100 @@ export const whatsappApi = createApi({
         { type: "WhatsAppNotification", id: "LIST" },
       ],
     }),
+    getWhatsAppRecipients: builder.query<
+      ApiEnvelope<WhatsAppAdminRecipient[]>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/whatsapp/recipients",
+        method: "GET",
+      }),
+      providesTags: (result) =>
+        result?.data?.length
+          ? [
+              ...result.data.map(({ id }) => ({
+                type: "WhatsAppRecipient" as const,
+                id,
+              })),
+              { type: "WhatsAppRecipient", id: "LIST" },
+            ]
+          : [{ type: "WhatsAppRecipient", id: "LIST" }],
+    }),
+    getWhatsAppRecipient: builder.query<
+      ApiEnvelope<WhatsAppAdminRecipient>,
+      string
+    >({
+      query: (id) => ({
+        url: `/admin/whatsapp/recipients/${encodeURIComponent(id)}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, id) => [
+        { type: "WhatsAppRecipient", id },
+      ],
+    }),
+    createWhatsAppRecipient: builder.mutation<
+      ApiEnvelope<WhatsAppAdminRecipient>,
+      CreateWhatsAppAdminRecipientRequest
+    >({
+      query: (body) => ({
+        url: "/admin/whatsapp/recipients",
+        method: "POST",
+        body,
+      }),
+      extraOptions: { skipErrorToast: true },
+      invalidatesTags: [{ type: "WhatsAppRecipient", id: "LIST" }],
+    }),
+    updateWhatsAppRecipient: builder.mutation<
+      ApiEnvelope<WhatsAppAdminRecipient>,
+      { id: string } & UpdateWhatsAppAdminRecipientRequest
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/admin/whatsapp/recipients/${encodeURIComponent(id)}`,
+        method: "PATCH",
+        body,
+      }),
+      extraOptions: { skipErrorToast: true },
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          const row = data.data;
+          if (!row) return;
+          dispatch(
+            whatsappApi.util.updateQueryData(
+              "getWhatsAppRecipients",
+              undefined,
+              (draft) => {
+                if (!Array.isArray(draft.data)) return;
+                const index = draft.data.findIndex((item) => item.id === id);
+                if (index >= 0) {
+                  draft.data[index] = row;
+                }
+              },
+            ),
+          );
+        } catch {
+          // Caller handles 400/403/404/409.
+        }
+      },
+      invalidatesTags: (_result, error, { id }) =>
+        error
+          ? [
+              { type: "WhatsAppRecipient", id },
+              { type: "WhatsAppRecipient", id: "LIST" },
+            ]
+          : [{ type: "WhatsAppRecipient", id }],
+    }),
+    deleteWhatsAppRecipient: builder.mutation<ApiEnvelope<null>, string>({
+      query: (id) => ({
+        url: `/admin/whatsapp/recipients/${encodeURIComponent(id)}`,
+        method: "DELETE",
+      }),
+      extraOptions: { skipErrorToast: true },
+      invalidatesTags: (_result, _error, id) => [
+        { type: "WhatsAppRecipient", id },
+        { type: "WhatsAppRecipient", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -189,4 +312,9 @@ export const {
   useGetWhatsAppNotificationsQuery,
   useSendWhatsAppTestMutation,
   useRetryWhatsAppNotificationMutation,
+  useGetWhatsAppRecipientsQuery,
+  useGetWhatsAppRecipientQuery,
+  useCreateWhatsAppRecipientMutation,
+  useUpdateWhatsAppRecipientMutation,
+  useDeleteWhatsAppRecipientMutation,
 } = whatsappApi;

@@ -8,6 +8,7 @@ import {
   StatusPill,
 } from "@/components/admin/ui";
 import { WhatsAppNotificationsPanel } from "@/app/admin/(panel)/whatsapp/notifications-panel";
+import { WhatsAppRecipientsPanel } from "@/app/admin/(panel)/whatsapp/recipients-panel";
 import {
   DEFAULT_WHATSAPP_TEST_MESSAGE,
   useGetWhatsAppHealthQuery,
@@ -137,7 +138,7 @@ function AdminWhatsAppPageInner() {
     <>
       <AdminPageHeader
         title="WhatsApp"
-        description="Check Cloud API configuration and send a session test. Order alerts are sent by the backend, not this page."
+        description="Manage staff numbers for new-order alerts, check Cloud API configuration, and send a session test. Order alerts are sent by the backend, not this page."
       />
 
       <div className="space-y-5">
@@ -191,6 +192,8 @@ function AdminWhatsAppPageInner() {
             </div>
           ) : null}
         </AdminPanel>
+
+        <WhatsAppRecipientsPanel />
 
         <AdminPanel title="Send test message">
           <p className="mb-4 text-sm text-slate-600">

@@ -19,6 +19,18 @@ export function isValidCheckoutPhone(value: string): boolean {
   return PK_LOCAL.test(phone) || PK_COUNTRY.test(phone) || E164.test(phone);
 }
 
+/** Display a stored WhatsApp number (e.g. `923001234567`) as `+92 300 1234567`. */
+export function formatWhatsAppPhoneDisplay(value: string): string {
+  const digits = normalizePhoneInput(value).replace(/\D/g, "");
+  if (digits.startsWith("92") && digits.length === 12) {
+    return `+92 ${digits.slice(2, 5)} ${digits.slice(5)}`;
+  }
+  if (digits.startsWith("0") && digits.length === 11) {
+    return `+92 ${digits.slice(1, 4)} ${digits.slice(4)}`;
+  }
+  return value;
+}
+
 /** Display mask like `0300***4567`. */
 export function maskPhone(value: string): string {
   const compact = normalizePhoneInput(value);
