@@ -29,6 +29,7 @@ import { customerApi } from "@/app/store/customerAPI";
 import { cartApi } from "@/app/store/cartAPI";
 import { cartReducer } from "@/app/store/cartSlice";
 import { checkoutApi } from "@/app/store/checkoutAPI";
+import { reviewApi } from "@/app/store/reviewAPI";
 import { customerAuthReducer } from "@/app/store/customerAuthSlice";
 import { snackbarReducer } from "@/lib/store/snackbarSlice";
 
@@ -73,6 +74,7 @@ const rootReducer = combineReducers({
   [accountApi.reducerPath]: accountApi.reducer,
   [cartApi.reducerPath]: cartApi.reducer,
   [checkoutApi.reducerPath]: checkoutApi.reducer,
+  [reviewApi.reducerPath]: reviewApi.reducer,
 });
 
 const persistConfig = {
@@ -109,6 +111,7 @@ export const makeStore = () => {
         accountApi.middleware,
         cartApi.middleware,
         checkoutApi.middleware,
+        reviewApi.middleware,
       ),
   });
 

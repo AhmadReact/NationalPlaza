@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
+  fetchProductReviewSummary,
   fetchRelatedStoreProducts,
   fetchStoreProduct,
   isProductUuid,
@@ -21,6 +22,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { ProductCard } from "@/components/product-card";
 import { ProductGallery } from "@/components/product-gallery";
+import { ProductReviews } from "@/components/product-reviews";
 import { ProductBanners } from "@/components/storefront-banners";
 import { PurchaseActions } from "@/components/purchase-actions";
 import { JsonLd } from "@/components/json-ld";
@@ -120,12 +122,11 @@ export default async function ProductPage({ params }: PageProps) {
   const detail = buildDetailContent(product);
   const galleryImages = getProductGalleryImages(product);
   const inStock = product.stock > 0;
-  const related = (
-    await fetchRelatedStoreProducts(
-      product.category?.id ?? "",
-      product.id,
-    )
-  ).map(toCardProduct);
+  const [relatedProducts, reviewSummary] = await Promise.all([
+    fetchRelatedStoreProducts(product.category?.id ?? "", product.id),
+    fetchProductReviewSummary(product.id),
+  ]);
+  const related = relatedProducts.map(toCardProduct);
 
   const priceUpdated = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -135,7 +136,7 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <>
-      <JsonLd data={buildProductJsonLd(origin, product)} />
+      <JsonLd data={buildProductJsonLd(origin, product, reviewSummary)} />
       <JsonLd
         data={buildBreadcrumbJsonLd(origin, [
           { name: "Home", path: "/" },
@@ -289,6 +290,10 @@ export default async function ProductPage({ params }: PageProps) {
 
         <div className="mx-auto max-w-7xl px-4 pb-4">
           <DetailTabs intro={detail.intro} specs={detail.specs} />
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 pb-10">
+          <ProductReviews productId={product.id} productName={product.name} />
         </div>
 
         {related.length > 0 && (

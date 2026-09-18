@@ -48,6 +48,30 @@ export async function fetchStoreProductById(
   return json?.data ?? null;
 }
 
+export async function fetchProductReviewSummary(
+  productId: string,
+): Promise<{ averageRating: number; totalReviews: number } | null> {
+  try {
+    const json = await fetchJson<
+      ApiMutationResponse<{
+        averageRating?: number;
+        totalReviews?: number;
+        reviewCount?: number;
+      }>
+    >(`/products/${encodeURIComponent(productId)}/reviews/summary`);
+    const data = json?.data;
+    if (!data) return null;
+    const total = Number(data.totalReviews ?? data.reviewCount ?? 0);
+    const average = Number(data.averageRating ?? 0);
+    if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(average)) {
+      return null;
+    }
+    return { averageRating: average, totalReviews: total };
+  } catch {
+    return null;
+  }
+}
+
 export function isProductUuid(param: string): boolean {
   return UUID_RE.test(param);
 }

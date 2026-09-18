@@ -14,6 +14,10 @@ import {
 } from "@/app/store/customerAuthSlice";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import {
+  OrderReviewModal,
+  type OrderReviewTarget,
+} from "@/components/order-review-modal";
 import { OrderStatusTimeline } from "@/components/order-timeline";
 import { OrderTrackingDetails } from "@/components/order-tracking";
 import { clientApiUrl } from "@/lib/api/clientBase";
@@ -30,6 +34,7 @@ import {
 import { maskPhone, resolveOrderNotifyPhone } from "@/lib/phone";
 import { toast } from "@/lib/store/snackbarSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import { isUuid } from "@/lib/uuid";
 
 export default function OrderClient({ id }: { id: string }) {
   const searchParams = useSearchParams();
@@ -67,8 +72,14 @@ export default function OrderClient({ id }: { id: string }) {
   const [cancelCustomerOrder, { isLoading: cancelling }] =
     useCancelCustomerOrderMutation();
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [reviewedProductIds, setReviewedProductIds] = useState<string[]>([]);
+  const [hiddenProductIds, setHiddenProductIds] = useState<string[]>([]);
+  const [reviewsLocked, setReviewsLocked] = useState(false);
+  const [reviewing, setReviewing] = useState<OrderReviewTarget | null>(null);
 
   const order = customerData?.data ?? guestData?.data ?? cachedOrder;
+  const isLoggedIn = Boolean(accessToken);
+  const isCustomerOrder = Boolean(customerData?.data);
   const canDownloadInvoice = Boolean(accessToken && customerData?.data);
   const canCancel = Boolean(
     accessToken &&
@@ -91,6 +102,15 @@ export default function OrderClient({ id }: { id: string }) {
     if (!redirectingToLogin) return;
     router.replace(`/login?next=${encodeURIComponent(`/orders/${id}`)}`);
   }, [id, redirectingToLogin, router]);
+
+  useEffect(() => {
+    if (!order) return;
+    if (window.location.hash !== "#review") return;
+    document.getElementById("review")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [order]);
 
   const downloadInvoice = async () => {
     if (!canDownloadInvoice || !accessToken || !order) return;
@@ -154,6 +174,22 @@ export default function OrderClient({ id }: { id: string }) {
       | undefined,
     "Order not found.",
   );
+
+  const delivered = order?.status === "DELIVERED";
+  const showGuestReview =
+    !isLoggedIn && delivered && !reviewsLocked && Boolean(order);
+  const showCustomerReview = isCustomerOrder && delivered && !reviewsLocked;
+
+  const markReviewed = (productId: string) => {
+    setReviewedProductIds((current) =>
+      current.includes(productId) ? current : [...current, productId],
+    );
+  };
+  const hideItemReview = (productId: string) => {
+    setHiddenProductIds((current) =>
+      current.includes(productId) ? current : [...current, productId],
+    );
+  };
 
   return (
     <>
@@ -250,20 +286,66 @@ export default function OrderClient({ id }: { id: string }) {
                 </p>
               ) : null}
 
-              <ul className="mt-8 space-y-3 border-b border-slate-100 pb-6">
-                {order.items.map((item) => (
-                  <li
-                    key={`${item.productId}-${item.sku}`}
-                    className="flex justify-between gap-4 text-sm"
-                  >
-                    <span className="text-slate-600">
-                      {item.productName} × {item.quantity}
-                    </span>
-                    <span className="font-semibold text-brand-950">
-                      {formatPrice(item.lineTotal)}
-                    </span>
-                  </li>
-                ))}
+              {(showGuestReview || showCustomerReview) &&
+              order.items.some(
+                (item) =>
+                  isUuid(item.productId) &&
+                  !reviewedProductIds.includes(item.productId) &&
+                  !hiddenProductIds.includes(item.productId),
+              ) ? (
+                <p className="mt-4 rounded-2xl border border-gold-200 bg-gold-50 px-4 py-3 text-sm text-brand-950">
+                  Your order was delivered. Rate the products below.
+                </p>
+              ) : null}
+
+              <ul
+                id="review"
+                className="mt-8 scroll-mt-24 space-y-3 border-b border-slate-100 pb-6"
+              >
+                {order.items.map((item, index) => {
+                  const canReviewItem =
+                    (showGuestReview || showCustomerReview) &&
+                    isUuid(item.productId) &&
+                    !hiddenProductIds.includes(item.productId);
+                  const reviewed = reviewedProductIds.includes(item.productId);
+
+                  return (
+                    <li
+                      key={`${item.productId}-${item.sku}-${index}`}
+                      className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-600">
+                          {item.productName} × {item.quantity}
+                        </p>
+                        {canReviewItem ? (
+                          reviewed ? (
+                            <p className="mt-1 text-xs font-semibold text-emerald-700">
+                              Reviewed
+                            </p>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setReviewing({
+                                  productId: item.productId,
+                                  productName: item.productName,
+                                })
+                              }
+                              aria-label={`Write a review for ${item.productName}`}
+                              className="mt-1 text-xs font-semibold text-brand-700 underline decoration-brand-700/40 underline-offset-2 hover:text-brand-900"
+                            >
+                              Write a review
+                            </button>
+                          )
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-brand-950">
+                        {formatPrice(item.lineTotal)}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
 
               <dl className="mt-4 space-y-2 text-sm">
@@ -411,6 +493,20 @@ export default function OrderClient({ id }: { id: string }) {
           ) : null}
         </div>
       </main>
+      <OrderReviewModal
+        open={Boolean(reviewing)}
+        orderId={order?.id ?? id}
+        item={reviewing}
+        mode={showCustomerReview ? "customer" : "guest"}
+        guestEmail={order?.guestEmail}
+        onClose={() => setReviewing(null)}
+        onReviewed={markReviewed}
+        onHideItem={hideItemReview}
+        onNotDelivered={() => {
+          setReviewsLocked(true);
+          setReviewing(null);
+        }}
+      />
       <Footer />
     </>
   );

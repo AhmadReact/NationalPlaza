@@ -27,6 +27,12 @@ function resolveUrl(args: string | FetchArgs): string {
   return args.url ?? "";
 }
 
+function isStorefrontReviewRoute(url: string): boolean {
+  return /(?:^|\/)products\/[^/]+\/reviews(?:\/summary)?(?:\?|$)/.test(
+    url.split("?")[0] ?? url,
+  );
+}
+
 function withAuthHeader(
   args: string | FetchArgs,
   token: string | null | undefined,
@@ -74,10 +80,11 @@ export const baseQueryWithInterceptor: BaseQueryFn<
     url.includes("/customer/") || url.startsWith("customer/");
   const isGuestOrderRoute =
     url.includes("/guest/orders") || url.startsWith("guest/orders");
+  const usesCustomerToken = isCustomerRoute || isStorefrontReviewRoute(url);
 
   const token = isGuestOrderRoute
     ? null
-    : isCustomerRoute
+    : usesCustomerToken
       ? state.customerAuth?.accessToken
       : state.auth?.accessToken;
 
@@ -111,13 +118,13 @@ export const baseQueryWithInterceptor: BaseQueryFn<
           if (!onAdminLogin) {
             window.location.assign("/admin/login");
           }
-        } else if (isCustomerRoute) {
+        } else if (usesCustomerToken) {
           await dispatchCustomerLogout(api.dispatch);
           if (path !== "/") {
             window.location.assign("/");
           }
         }
-      } else if (isCustomerRoute) {
+      } else if (usesCustomerToken) {
         await dispatchCustomerLogout(api.dispatch);
       } else {
         api.dispatch(logout());

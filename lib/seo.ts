@@ -154,10 +154,16 @@ function productImageUrls(product: StoreProduct): string[] {
   return product.thumbnail?.url ? [product.thumbnail.url] : [];
 }
 
-export function buildProductJsonLd(origin: string, product: StoreProduct) {
+export function buildProductJsonLd(
+  origin: string,
+  product: StoreProduct,
+  reviewSummary?: { averageRating: number; totalReviews: number } | null,
+) {
   const price = productOfferPrice(product);
   const url = `${origin}${productCanonicalPath(product)}`;
   const images = productImageUrls(product);
+  const totalReviews = reviewSummary?.totalReviews ?? 0;
+  const averageRating = reviewSummary?.averageRating ?? 0;
 
   return {
     "@context": "https://schema.org",
@@ -171,6 +177,16 @@ export function buildProductJsonLd(origin: string, product: StoreProduct) {
       : undefined,
     category: product.category?.name || undefined,
     url,
+    aggregateRating:
+      totalReviews > 0 && Number.isFinite(averageRating)
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: Number(averageRating).toFixed(1),
+            reviewCount: totalReviews,
+            bestRating: 5,
+            worstRating: 1,
+          }
+        : undefined,
     offers: price
       ? {
           "@type": "Offer",
