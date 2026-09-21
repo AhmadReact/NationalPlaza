@@ -5,7 +5,7 @@ import { noIndexRobots } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "My Account",
   description:
-    "Manage your addresses, wishlist, recently viewed products, preferences, and cart.",
+    "Manage your orders, addresses, wishlist, recently viewed products, preferences, and cart.",
   robots: noIndexRobots,
 };
 

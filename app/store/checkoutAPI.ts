@@ -161,6 +161,80 @@ export type ApiListResponse<T> = {
   meta: unknown;
 };
 
+export type PaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+};
+
+export type CustomerOrderListParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: OrderStatus | string;
+};
+
+export type CustomerOrdersResponse = {
+  success: boolean;
+  message: string;
+  data: PlaceOrderResult[];
+  errors: unknown;
+  meta: PaginationMeta;
+};
+
+function toQueryString(params: CustomerOrderListParams): string {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    searchParams.set(key, String(value));
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asPositiveInt(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : fallback;
+}
+
+function normalizePaginationMeta(
+  meta: unknown,
+  dataLength: number,
+): PaginationMeta {
+  const rec = asRecord(meta) ?? {};
+  const page = asPositiveInt(rec.page, 1);
+  const limit = asPositiveInt(rec.limit, 20);
+  const total = typeof rec.total === "number" ? rec.total : dataLength;
+  const totalPages = asPositiveInt(
+    rec.totalPages,
+    Math.max(1, Math.ceil((total || 1) / limit)),
+  );
+
+  return {
+    page,
+    limit,
+    total,
+    totalPages,
+    hasNextPage:
+      typeof rec.hasNextPage === "boolean" ? rec.hasNextPage : page < totalPages,
+    hasPreviousPage:
+      typeof rec.hasPreviousPage === "boolean"
+        ? rec.hasPreviousPage
+        : page > 1,
+  };
+}
+
 export const checkoutApi = createApi({
   reducerPath: "checkoutApi",
   baseQuery: baseQueryWithInterceptor,
@@ -214,6 +288,7 @@ export const checkoutApi = createApi({
         body,
       }),
       extraOptions: { skipErrorToast: true },
+      invalidatesTags: [{ type: "Order", id: "LIST" }],
     }),
     previewGuestCheckout: builder.mutation<
       ApiResponse<CheckoutPreview>,
@@ -248,6 +323,38 @@ export const checkoutApi = createApi({
       }),
       extraOptions: { skipErrorToast: true, skipAuthLogout: true },
     }),
+    getCustomerOrders: builder.query<
+      CustomerOrdersResponse,
+      CustomerOrderListParams | void
+    >({
+      query: (params) => ({
+        url: `/customer/orders${toQueryString({
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 20,
+          search: params?.search,
+          status: params?.status,
+        })}`,
+        method: "GET",
+      }),
+      extraOptions: { skipErrorToast: true },
+      transformResponse: (
+        response: ApiResponse<PlaceOrderResult[] | null> | CustomerOrdersResponse,
+      ): CustomerOrdersResponse => {
+        const data = Array.isArray(response.data) ? response.data : [];
+        return {
+          ...response,
+          data,
+          meta: normalizePaginationMeta(response.meta, data.length),
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.length
+          ? [
+              ...result.data.map(({ id }) => ({ type: "Order" as const, id })),
+              { type: "Order", id: "LIST" },
+            ]
+          : [{ type: "Order", id: "LIST" }],
+    }),
     getOrderById: builder.query<ApiResponse<PlaceOrderResult>, string>({
       query: (id) => ({
         url: `/customer/orders/${encodeURIComponent(id)}`,
@@ -271,7 +378,10 @@ export const checkoutApi = createApi({
           method: "POST",
         }),
         extraOptions: { skipErrorToast: true },
-        invalidatesTags: (_r, _e, id) => [{ type: "Order", id }],
+        invalidatesTags: (_r, _e, id) => [
+          { type: "Order", id },
+          { type: "Order", id: "LIST" },
+        ],
       },
     ),
     lookupGuestOrder: builder.mutation<
@@ -294,6 +404,7 @@ export const {
   usePreviewCheckoutMutation,
   useRequestCheckoutOtpMutation,
   usePlaceOrderMutation,
+  useGetCustomerOrdersQuery,
   usePreviewGuestCheckoutMutation,
   useRequestGuestCheckoutOtpMutation,
   usePlaceGuestOrderMutation,

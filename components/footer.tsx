@@ -15,6 +15,7 @@ const columns = [
     heading: "Customer Support",
     links: [
       { label: "My Account", href: "/account" },
+      { label: "Orders", href: "/account/orders" },
       { label: "Wishlist", href: "/account/wishlist" },
       { label: "Track Order", href: "/track-order" },
       { label: "FAQs", href: "#" },

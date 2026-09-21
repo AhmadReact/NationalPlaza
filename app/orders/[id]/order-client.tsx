@@ -482,6 +482,14 @@ export default function OrderClient({ id }: { id: string }) {
                     </button>
                   </div>
                 ) : null}
+                {isLoggedIn ? (
+                  <Link
+                    href="/account/orders"
+                    className="rounded-full border-2 border-brand-900/15 px-5 py-2.5 text-sm font-semibold text-brand-900 hover:border-brand-700"
+                  >
+                    My orders
+                  </Link>
+                ) : null}
                 <Link
                   href="/"
                   className="rounded-full border-2 border-brand-900/15 px-5 py-2.5 text-sm font-semibold text-brand-900 hover:border-brand-700"

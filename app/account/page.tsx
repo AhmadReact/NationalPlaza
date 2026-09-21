@@ -8,6 +8,7 @@ import {
   useGetRecentlyViewedQuery,
   useGetWishlistQuery,
 } from "@/app/store/accountAPI";
+import { useGetCustomerOrdersQuery } from "@/app/store/checkoutAPI";
 import { selectCartItemCount } from "@/app/store/cartSlice";
 import {
   getCustomerDisplayName,
@@ -16,6 +17,11 @@ import { selectCustomerUser } from "@/app/store/customerAuthSlice";
 import { useAppSelector } from "@/lib/store/hooks";
 
 const cards = [
+  {
+    href: "/account/orders",
+    title: "Orders",
+    description: "Track and reopen your purchases",
+  },
   {
     href: "/account/addresses",
     title: "Addresses",
@@ -46,12 +52,15 @@ const cards = [
 export default function AccountPage() {
   const user = useAppSelector(selectCustomerUser);
   const cartCount = useAppSelector(selectCartItemCount);
+  const { data: ordersData } = useGetCustomerOrdersQuery({ page: 1, limit: 1 });
   const { data: addressesData } = useGetAddressesQuery();
   const { data: wishlistData } = useGetWishlistQuery();
   const { data: recentData } = useGetRecentlyViewedQuery();
   const { data: preferencesData } = useGetPreferencesQuery();
+  const orderCount = ordersData?.meta?.total ?? ordersData?.data?.length ?? 0;
 
   const counts: Record<string, string> = {
+    Orders: `${orderCount} order${orderCount === 1 ? "" : "s"}`,
     Addresses: `${addressesData?.data?.length ?? 0} saved`,
     Wishlist: `${unwrapAccountProducts(wishlistData?.data).length} items`,
     "Recently viewed": `${unwrapAccountProducts(recentData?.data).length} products`,

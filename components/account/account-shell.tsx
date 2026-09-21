@@ -10,6 +10,7 @@ import { useAppSelector } from "@/lib/store/hooks";
 
 const navItems = [
   { href: "/account", label: "Overview" },
+  { href: "/account/orders", label: "Orders" },
   { href: "/account/addresses", label: "Addresses" },
   { href: "/account/wishlist", label: "Wishlist" },
   { href: "/account/recently-viewed", label: "Recently viewed" },
