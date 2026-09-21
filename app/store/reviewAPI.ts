@@ -43,6 +43,7 @@ export type ProductReviewsQuery = {
 
 export type CreateProductReviewInput = {
   productId: string;
+  orderId: string;
   rating: number;
   title?: string;
   body?: string;
@@ -83,6 +84,7 @@ function fallbackReview(raw: unknown): Review {
     normalizeReview(raw) ?? {
       id: "",
       productId: "",
+      orderId: null,
       userId: null,
       rating: 0,
       title: null,
@@ -164,10 +166,15 @@ export const reviewApi = createApi({
       ApiResponse<Review>,
       CreateProductReviewInput
     >({
-      query: ({ productId, ...body }) => ({
+      query: ({ productId, orderId, rating, title, body }) => ({
         url: `/products/${encodeURIComponent(productId)}/reviews`,
         method: "POST",
-        body,
+        body: {
+          orderId,
+          rating,
+          ...(title ? { title } : {}),
+          ...(body ? { body } : {}),
+        },
       }),
       extraOptions: { skipErrorToast: true },
       transformResponse: normalizeReviewResponse,

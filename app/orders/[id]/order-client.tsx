@@ -34,6 +34,7 @@ import {
 import { maskPhone, resolveOrderNotifyPhone } from "@/lib/phone";
 import { toast } from "@/lib/store/snackbarSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import { reviewLineKey } from "@/lib/reviews";
 import { isUuid } from "@/lib/uuid";
 
 export default function OrderClient({ id }: { id: string }) {
@@ -72,8 +73,8 @@ export default function OrderClient({ id }: { id: string }) {
   const [cancelCustomerOrder, { isLoading: cancelling }] =
     useCancelCustomerOrderMutation();
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [reviewedProductIds, setReviewedProductIds] = useState<string[]>([]);
-  const [hiddenProductIds, setHiddenProductIds] = useState<string[]>([]);
+  const [reviewedLineKeys, setReviewedLineKeys] = useState<string[]>([]);
+  const [hiddenLineKeys, setHiddenLineKeys] = useState<string[]>([]);
   const [reviewsLocked, setReviewsLocked] = useState(false);
   const [reviewing, setReviewing] = useState<OrderReviewTarget | null>(null);
 
@@ -178,16 +179,20 @@ export default function OrderClient({ id }: { id: string }) {
   const delivered = order?.status === "DELIVERED";
   const showGuestReview =
     !isLoggedIn && delivered && !reviewsLocked && Boolean(order);
-  const showCustomerReview = isCustomerOrder && delivered && !reviewsLocked;
+  const showCustomerReview =
+    isLoggedIn && isCustomerOrder && delivered && !reviewsLocked;
+  const reviewOrderId = order?.id ?? id;
 
   const markReviewed = (productId: string) => {
-    setReviewedProductIds((current) =>
-      current.includes(productId) ? current : [...current, productId],
+    const key = reviewLineKey(reviewOrderId, productId);
+    setReviewedLineKeys((current) =>
+      current.includes(key) ? current : [...current, key],
     );
   };
   const hideItemReview = (productId: string) => {
-    setHiddenProductIds((current) =>
-      current.includes(productId) ? current : [...current, productId],
+    const key = reviewLineKey(reviewOrderId, productId);
+    setHiddenLineKeys((current) =>
+      current.includes(key) ? current : [...current, key],
     );
   };
 
@@ -287,12 +292,14 @@ export default function OrderClient({ id }: { id: string }) {
               ) : null}
 
               {(showGuestReview || showCustomerReview) &&
-              order.items.some(
-                (item) =>
-                  isUuid(item.productId) &&
-                  !reviewedProductIds.includes(item.productId) &&
-                  !hiddenProductIds.includes(item.productId),
-              ) ? (
+              order.items.some((item) => {
+                if (!isUuid(item.productId)) return false;
+                const key = reviewLineKey(order.id, item.productId);
+                return (
+                  !reviewedLineKeys.includes(key) &&
+                  !hiddenLineKeys.includes(key)
+                );
+              }) ? (
                 <p className="mt-4 rounded-2xl border border-gold-200 bg-gold-50 px-4 py-3 text-sm text-brand-950">
                   Your order was delivered. Rate the products below.
                 </p>
@@ -303,11 +310,12 @@ export default function OrderClient({ id }: { id: string }) {
                 className="mt-8 scroll-mt-24 space-y-3 border-b border-slate-100 pb-6"
               >
                 {order.items.map((item, index) => {
+                  const lineKey = reviewLineKey(order.id, item.productId);
                   const canReviewItem =
                     (showGuestReview || showCustomerReview) &&
                     isUuid(item.productId) &&
-                    !hiddenProductIds.includes(item.productId);
-                  const reviewed = reviewedProductIds.includes(item.productId);
+                    !hiddenLineKeys.includes(lineKey);
+                  const reviewed = reviewedLineKeys.includes(lineKey);
 
                   return (
                     <li
@@ -494,10 +502,10 @@ export default function OrderClient({ id }: { id: string }) {
         </div>
       </main>
       <OrderReviewModal
-        open={Boolean(reviewing)}
-        orderId={order?.id ?? id}
+        open={Boolean(reviewing) && (showGuestReview || showCustomerReview)}
+        orderId={reviewOrderId}
         item={reviewing}
-        mode={showCustomerReview ? "customer" : "guest"}
+        mode={isLoggedIn ? "customer" : "guest"}
         guestEmail={order?.guestEmail}
         onClose={() => setReviewing(null)}
         onReviewed={markReviewed}

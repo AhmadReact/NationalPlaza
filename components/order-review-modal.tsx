@@ -24,6 +24,7 @@ import {
 import { toast } from "@/lib/store/snackbarSlice";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { StarRatingInput } from "@/components/star-rating";
+import { isUuid } from "@/lib/uuid";
 
 const FOCUSABLE =
   'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
@@ -48,14 +49,16 @@ type OrderReviewModalProps = {
 export function OrderReviewModal({
   open,
   item,
+  orderId,
   ...props
 }: OrderReviewModalProps) {
   if (!open || !item) return null;
 
   return (
     <OrderReviewDialog
-      key={item.productId}
+      key={`${orderId}:${item.productId}`}
       item={item}
+      orderId={orderId}
       {...props}
     />
   );
@@ -150,17 +153,26 @@ function OrderReviewDialog({
     setError(null);
 
     try {
-      if (mode === "guest") {
-        await createGuestReview({
-          orderId,
-          email: submitEmail,
+      if (mode === "customer") {
+        if (!isUuid(orderId)) {
+          setError("This order link is invalid.");
+          return;
+        }
+        await createProductReview({
           productId: item.productId,
+          orderId,
           rating,
           ...(optionalTitle ? { title: optionalTitle } : {}),
           ...(optionalBody ? { body: optionalBody } : {}),
         }).unwrap();
       } else {
-        await createProductReview({
+        if (!isUuid(orderId)) {
+          setError("This order link is invalid.");
+          return;
+        }
+        await createGuestReview({
+          orderId,
+          email: submitEmail,
           productId: item.productId,
           rating,
           ...(optionalTitle ? { title: optionalTitle } : {}),

@@ -23,6 +23,7 @@ export type ReviewImage = {
 export type Review = {
   id: string;
   productId: string;
+  orderId?: string | null;
   userId: string | null;
   rating: number;
   title: string | null;
@@ -113,6 +114,7 @@ export function normalizeReview(raw: unknown): Review | null {
   return {
     id: rec.id,
     productId: asString(rec.productId),
+    orderId: asNullableString(rec.orderId),
     userId: asNullableString(rec.userId),
     rating: Number.isFinite(rating) ? rating : 0,
     title: asNullableString(rec.title),
@@ -127,6 +129,10 @@ export function normalizeReview(raw: unknown): Review | null {
     createdAt: asString(rec.createdAt),
     updatedAt: asString(rec.updatedAt),
   };
+}
+
+export function reviewLineKey(orderId: string, productId: string): string {
+  return `${orderId}:${productId}`;
 }
 
 export function reviewAuthorName(author: ReviewAuthor | null | undefined): string {

@@ -16,7 +16,7 @@ export default async function OrderPage({
         </div>
       }
     >
-      <OrderClient id={id} />
+      <OrderClient key={id} id={id} />
     </Suspense>
   );
 }

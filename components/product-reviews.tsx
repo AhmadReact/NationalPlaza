@@ -1,13 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   useGetProductReviewSummaryQuery,
   useGetProductReviewsQuery,
 } from "@/app/store/reviewAPI";
-import { selectCustomerAccessToken } from "@/app/store/customerAuthSlice";
-import { OrderReviewModal } from "@/components/order-review-modal";
 import { StarRatingDisplay } from "@/components/star-rating";
 import {
   reviewAuthorInitials,
@@ -18,8 +15,6 @@ import {
   type Review,
   type ReviewAuthor,
 } from "@/lib/reviews";
-import { toast } from "@/lib/store/snackbarSlice";
-import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 
 function replyText(raw: unknown): string | null {
   if (!raw || typeof raw !== "object") return null;
@@ -124,17 +119,10 @@ function ReviewCard({ review }: { review: Review }) {
 
 export function ProductReviews({
   productId,
-  productName,
 }: {
   productId: string;
   productName: string;
 }) {
-  const dispatch = useAppDispatch();
-  const accessToken = useAppSelector(selectCustomerAccessToken);
-  const isLoggedIn = Boolean(accessToken);
-  const [writing, setWriting] = useState(false);
-  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
-
   const { data: summaryData } = useGetProductReviewSummaryQuery(productId);
   const { data: listData, isLoading } = useGetProductReviewsQuery({
     productId,
@@ -149,11 +137,6 @@ export function ProductReviews({
   const average = summaryAverage(summary);
   const starCounts = summaryStarCounts(summary);
   const maxCount = Math.max(1, ...starCounts);
-
-  const writeTarget = useMemo(
-    () => ({ productId, productName }),
-    [productId, productName],
-  );
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -195,37 +178,16 @@ export function ProductReviews({
           <p className="mt-2 text-sm text-slate-500">No reviews yet.</p>
         )}
 
-        <div className="mt-4">
-          {isLoggedIn && alreadyReviewed ? (
-            <p className="text-sm font-semibold text-emerald-700">Reviewed</p>
-          ) : isLoggedIn ? (
-            <button
-              type="button"
-              onClick={() => setWriting(true)}
-              className="rounded-full bg-brand-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700"
-            >
-              Write a review
-            </button>
-          ) : (
-            <p className="text-sm text-slate-500">
-              Bought this? Rate it from your{" "}
-              <Link
-                href="/track-order"
-                className="font-semibold text-brand-700 underline decoration-brand-700/40 underline-offset-2 hover:text-brand-900"
-              >
-                delivered order
-              </Link>
-              .{" "}
-              <Link
-                href="/login"
-                className="font-semibold text-brand-700 underline decoration-brand-700/40 underline-offset-2 hover:text-brand-900"
-              >
-                Sign in
-              </Link>{" "}
-              if you ordered with an account.
-            </p>
-          )}
-        </div>
+        <p className="mt-4 text-sm text-slate-500">
+          Bought this? Rate it from your{" "}
+          <Link
+            href="/track-order"
+            className="font-semibold text-brand-700 underline decoration-brand-700/40 underline-offset-2 hover:text-brand-900"
+          >
+            delivered order
+          </Link>
+          .
+        </p>
       </div>
 
       <div className="space-y-3 px-6 py-5 sm:px-8">
@@ -241,25 +203,6 @@ export function ProductReviews({
           </p>
         )}
       </div>
-
-      <OrderReviewModal
-        open={writing}
-        orderId=""
-        item={writing ? writeTarget : null}
-        mode="customer"
-        onClose={() => setWriting(false)}
-        onReviewed={() => {
-          setAlreadyReviewed(true);
-          setWriting(false);
-        }}
-        onHideItem={() => setWriting(false)}
-        onNotDelivered={() => {
-          setWriting(false);
-          dispatch(
-            toast.info("You can review this product after a delivered order."),
-          );
-        }}
-      />
     </section>
   );
 }
