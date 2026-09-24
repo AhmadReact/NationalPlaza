@@ -66,6 +66,8 @@ export function buildSiteGraphJsonLd(origin: string) {
         email: SITE_EMAIL,
         telephone: SITE_PHONE,
         foundingDate: "1946",
+        currenciesAccepted: "PKR",
+        paymentAccepted: "Cash, Credit Card, Bank Transfer",
         address: {
           "@type": "PostalAddress",
           streetAddress: "Thana Bazar",
@@ -86,6 +88,7 @@ export function buildSiteGraphJsonLd(origin: string) {
         "@id": `${origin}/#website`,
         name: SITE_NAME,
         url: origin,
+        inLanguage: "en-PK",
         description: SITE_DESCRIPTION,
         publisher: { "@id": `${origin}/#organization` },
         potentialAction: {
@@ -136,13 +139,21 @@ export function productMetaDescription(product: StoreProduct): string {
   );
 }
 
-function productOfferPrice(product: StoreProduct): number | null {
+function productOfferPrices(product: StoreProduct): {
+  active: number | null;
+  list: number | null;
+} {
   const hasSale =
     product.salePrice !== null &&
     product.salePrice !== undefined &&
     product.salePrice < product.price;
-  const price = hasSale ? product.salePrice : product.price;
-  return price ? price : null;
+  const active = hasSale ? product.salePrice : product.price;
+  if (!active) return { active: null, list: null };
+  return { active, list: hasSale ? product.price : null };
+}
+
+function schemaMoney(value: number): string {
+  return Number(value).toFixed(2);
 }
 
 function productImageUrls(product: StoreProduct): string[] {
@@ -159,7 +170,7 @@ export function buildProductJsonLd(
   product: StoreProduct,
   reviewSummary?: { averageRating: number; totalReviews: number } | null,
 ) {
-  const price = productOfferPrice(product);
+  const prices = productOfferPrices(product);
   const url = `${origin}${productCanonicalPath(product)}`;
   const images = productImageUrls(product);
   const totalReviews = reviewSummary?.totalReviews ?? 0;
@@ -187,22 +198,56 @@ export function buildProductJsonLd(
             worstRating: 1,
           }
         : undefined,
-    offers: price
+    offers: prices.active
       ? {
           "@type": "Offer",
           url,
           priceCurrency: "PKR",
-          price: Number(price).toFixed(2),
+          price: schemaMoney(prices.active),
           availability:
             product.stock > 0
               ? "https://schema.org/InStock"
               : "https://schema.org/OutOfStock",
           itemCondition: "https://schema.org/NewCondition",
+          areaServed: {
+            "@type": "Country",
+            name: "Pakistan",
+          },
+          eligibleRegion: {
+            "@type": "Country",
+            name: "PK",
+          },
           seller: {
             "@type": "Organization",
             name: SITE_NAME,
             url: origin,
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: "Thana Bazar",
+              addressLocality: "Arifwala",
+              addressRegion: "Punjab",
+              addressCountry: "PK",
+            },
           },
+          hasMerchantReturnPolicy: {
+            "@type": "MerchantReturnPolicy",
+            applicableCountry: "PK",
+            returnPolicyCategory:
+              "https://schema.org/MerchantReturnFiniteReturnWindow",
+            merchantReturnDays: 14,
+            returnMethod: "https://schema.org/ReturnByMail",
+            returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+            refundType: "https://schema.org/ExchangeRefund",
+            merchantReturnLink: `${origin}/policies/refund-policy`,
+          },
+          priceSpecification: prices.list
+            ? {
+                "@type": "UnitPriceSpecification",
+                priceType: "https://schema.org/StrikethroughPrice",
+                price: schemaMoney(prices.list),
+                priceCurrency: "PKR",
+              }
+            : undefined,
         }
       : undefined,
   };

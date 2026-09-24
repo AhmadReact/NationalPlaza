@@ -65,8 +65,12 @@ export interface Testimonial {
   date: string;
 }
 
+/** Visible ISO code. "Rs." is shared with India, and Google renders that as ₹. */
 export function formatPrice(value: number): string {
-  return "Rs." + value.toLocaleString("en-US");
+  const amount = new Intl.NumberFormat("en-PK", {
+    maximumFractionDigits: 0,
+  }).format(value);
+  return `PKR ${amount}`;
 }
 
 export const categories: Category[] = [
@@ -102,7 +106,7 @@ export const heroSlides: HeroSlide[] = [
     id: "beat-the-heat",
     kicker: "Beat the Heat",
     title: "Room Air Coolers",
-    highlight: "From Rs.24,500",
+    highlight: "From PKR 24,500",
     subtitle:
       "Super Asia, Royal & Canon coolers with ice-box technology. Big airflow, tiny power bill.",
     cta: "Shop Air Coolers",
@@ -128,7 +132,7 @@ export const heroSlides: HeroSlide[] = [
     id: "cinema-home",
     kicker: "Cinema at Home",
     title: "4K Smart LED TVs",
-    highlight: "Starting Rs.49,900",
+    highlight: "Starting PKR 49,900",
     subtitle:
       "Android & Google TV from Samsung, TCL and Haier with 2-year official warranty.",
     cta: "Shop LED TVs",

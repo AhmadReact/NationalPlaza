@@ -84,6 +84,7 @@ export async function generateMetadata({
     alternates: { canonical },
     openGraph: {
       type: "website",
+      locale: "en_PK",
       title: product.name,
       description,
       url: canonical,
