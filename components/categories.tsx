@@ -1,12 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useLiveHomePage } from "@/app/store/useLiveHomePage";
 import { getFetchErrorMessage } from "@/lib/api/errorMessage";
+import type { HomeCategoryCard } from "@/lib/home";
 
-export function Categories() {
+export function Categories({
+  initialCategories = [],
+}: {
+  initialCategories?: HomeCategoryCard[];
+}) {
   const { data, isLoading, isError, error } = useLiveHomePage();
-  const categories = data?.data?.categories ?? [];
+  const categories = data?.data?.categories ?? initialCategories;
 
   if (isLoading && categories.length === 0) {
     return (
@@ -26,7 +32,7 @@ export function Categories() {
     );
   }
 
-  if (isError) {
+  if (isError && categories.length === 0) {
     return (
       <section id="categories" className="scroll-mt-32 py-5 sm:py-16">
         <div className="mx-auto max-w-7xl px-4">
@@ -81,10 +87,12 @@ export function Categories() {
             >
               {category.image ? (
                 <span className="grid size-9 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-brand-50 to-slate-100 transition-all duration-300 group-hover:scale-105 group-hover:from-brand-900 group-hover:to-brand-700 sm:size-16 sm:rounded-2xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={category.image}
                     alt=""
+                    width={80}
+                    height={80}
+                    sizes="40px"
                     className="size-6 object-contain sm:size-10"
                   />
                 </span>

@@ -1,10 +1,12 @@
 import "server-only";
 import { cache } from "react";
+import type { Banner } from "@/app/admin/(panel)/banners/store/bannerAPI";
 import type {
   Category,
   CategoryFiltersData,
   CategoryTreeNode,
 } from "@/app/admin/(panel)/categories/store/categoryAPI";
+import type { HomePage } from "@/lib/home";
 import type {
   ApiListResponse,
   ApiMutationResponse,
@@ -122,6 +124,20 @@ export async function fetchStoreProducts(
     `/products${toCatalogQueryString(params)}`,
   );
 }
+
+export const fetchStoreBanners = cache(
+  async (placement: string): Promise<Banner[]> => {
+    const json = await fetchJson<ApiListResponse<Banner>>(
+      `/banners?placement=${encodeURIComponent(placement)}`,
+    );
+    return (json?.data ?? []).filter((banner) => banner.imageUrl);
+  },
+);
+
+export const fetchHomePage = cache(async (): Promise<HomePage | null> => {
+  const json = await fetchJson<ApiMutationResponse<HomePage>>("/home");
+  return json?.data ?? null;
+});
 
 export const fetchStoreCategoryTree = cache(
   async (): Promise<CategoryTreeNode[]> => {

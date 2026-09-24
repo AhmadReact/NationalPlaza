@@ -12,9 +12,15 @@ import type { Banner } from "@/app/admin/(panel)/banners/store/bannerAPI";
 
 const AUTOPLAY_MS = 5000;
 
-export function HeroSlider() {
+export function HeroSlider({
+  initialBanners = [],
+}: {
+  initialBanners?: Banner[];
+}) {
   const { data, isLoading } = useLiveStoreBanners({ placement: "HOME_HERO" });
-  const banners = (data?.data ?? []).filter((banner) => banner.imageUrl);
+  const banners = (data?.data ?? initialBanners).filter(
+    (banner) => banner.imageUrl,
+  );
 
   if (isLoading && banners.length === 0) {
     return (
@@ -67,43 +73,26 @@ function CmsHeroSlider({ banners }: { banners: Banner[] }) {
   return (
     <section aria-label="Special offers" className="relative">
       <div className="relative h-[540px] overflow-hidden bg-black sm:h-[600px] lg:h-[640px]">
-        {banners.map((banner, i) => (
-          <div
-            key={banner.id}
-            className={`absolute inset-0 transition-opacity duration-700 ease-out ${
-              i === index ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
-            aria-hidden={i !== index}
-          >
-            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-              <picture className="block h-full w-full">
-                {banner.mobileImageUrl ? (
-                  <source
-                    media="(max-width: 768px)"
-                    srcSet={banner.mobileImageUrl}
-                  />
-                ) : null}
-                <img
-                  src={banner.imageUrl ?? ""}
-                  alt=""
-                  className="h-full w-full scale-125 object-cover blur-2xl"
-                />
-              </picture>
-            </div>
-            <div className="absolute inset-0 mx-auto max-w-[88rem] px-4 lg:px-8">
-              <BannerLink
-                banner={banner}
-                className="relative block h-full w-full overflow-hidden [&_img]:h-full [&_img]:w-full [&_img]:object-fill"
-              >
-                <BannerImage
+        {banners.map((banner, i) =>
+          i === index ? (
+            <div key={banner.id} className="absolute inset-0">
+              <div className="absolute inset-0 mx-auto max-w-[88rem] px-4 lg:px-8">
+                <BannerLink
                   banner={banner}
-                  className="block h-full w-full"
-                  imgClassName="h-full w-full object-fill"
-                />
-              </BannerLink>
+                  className="relative block h-full w-full"
+                >
+                  <BannerImage
+                    banner={banner}
+                    priority={i === 0}
+                    fit="cover"
+                    sizes="(min-width: 1280px) 1200px, 100vw"
+                    className="h-full w-full"
+                  />
+                </BannerLink>
+              </div>
             </div>
-          </div>
-        ))}
+          ) : null,
+        )}
 
         {count > 1 ? (
           <>

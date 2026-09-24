@@ -4,12 +4,17 @@ import { toHomeCardProduct } from "@/app/store/customerAPI";
 import { useLiveHomePage } from "@/app/store/useLiveHomePage";
 import { ProductCardSkeleton } from "@/components/product-card";
 import { ProductSection } from "@/components/product-section";
+import type { HomePage } from "@/lib/home";
 
 const ACCENTS = ["brand", "emerald", "teal", "violet"] as const;
 
-export function HomeProducts() {
-  const { data, isLoading, isError } = useLiveHomePage();
-  const sections = data?.data?.sections ?? [];
+export function HomeProducts({
+  initialPage = null,
+}: {
+  initialPage?: HomePage | null;
+}) {
+  const { data, isLoading } = useLiveHomePage();
+  const sections = data?.data?.sections ?? initialPage?.sections ?? [];
 
   if (isLoading && sections.length === 0) {
     return (
@@ -26,7 +31,7 @@ export function HomeProducts() {
     );
   }
 
-  if (isError || sections.length === 0) return null;
+  if (sections.length === 0) return null;
 
   return (
     <>

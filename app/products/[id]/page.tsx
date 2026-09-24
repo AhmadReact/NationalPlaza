@@ -204,7 +204,7 @@ export default async function ProductPage({ params }: PageProps) {
                       {formatPrice(price)}
                     </span>
                     {oldPrice && (
-                      <span className="text-base text-slate-400 line-through">
+                      <span className="text-base text-slate-600 line-through">
                         {formatPrice(oldPrice)}
                       </span>
                     )}

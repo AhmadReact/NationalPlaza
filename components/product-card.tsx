@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { formatPrice, type Product } from "@/lib/data";
 import { AddToCartButton } from "./add-to-cart-button";
@@ -49,11 +50,12 @@ export function ProductCard({
           className="absolute inset-0"
         />
         {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={product.imageUrl}
             alt={product.imageAlt ?? product.name}
-            className="h-full w-full object-contain object-center p-3 sm:p-6 lg:p-8"
+            fill
+            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 280px"
+            className="pointer-events-none object-contain object-center p-3 sm:p-6 lg:p-8"
           />
         ) : (
           <ApplianceArt
@@ -108,7 +110,7 @@ export function ProductCard({
                 {formatPrice(product.price)}
               </span>
               {product.oldPrice && (
-                <span className="text-[11px] tabular-nums text-slate-400 line-through sm:text-xs">
+                <span className="text-[11px] tabular-nums text-slate-600 line-through sm:text-xs">
                   {formatPrice(product.oldPrice)}
                 </span>
               )}

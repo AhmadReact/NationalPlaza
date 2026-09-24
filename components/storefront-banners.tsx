@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   isExternalHref,
@@ -31,26 +32,34 @@ export function useLiveStoreBanners(params: StoreBannerParams, skip = false) {
 export function BannerImage({
   banner,
   className,
-  imgClassName,
+  priority = false,
+  sizes = "100vw",
+  fit = "cover",
 }: {
   banner: Banner;
   className?: string;
-  imgClassName?: string;
+  priority?: boolean;
+  sizes?: string;
+  fit?: "cover" | "contain";
 }) {
   if (!banner.imageUrl) return null;
-  const alt = banner.alt ?? banner.title;
+  const alt = banner.alt ?? banner.title ?? "";
 
   return (
-    <picture className={["block", className].filter(Boolean).join(" ")}>
-      {banner.mobileImageUrl ? (
-        <source media="(max-width: 768px)" srcSet={banner.mobileImageUrl} />
-      ) : null}
-      <img
+    <span
+      className={["relative block overflow-hidden", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <Image
         src={banner.imageUrl}
         alt={alt}
-        className={["block", imgClassName].filter(Boolean).join(" ")}
+        fill
+        priority={priority}
+        sizes={sizes}
+        className={fit === "contain" ? "object-contain" : "object-cover"}
       />
-    </picture>
+    </span>
   );
 }
 
@@ -86,9 +95,15 @@ export function BannerLink({
   );
 }
 
-export function HomePromoBanners() {
+export function HomePromoBanners({
+  initialBanners = [],
+}: {
+  initialBanners?: Banner[];
+}) {
   const { data } = useLiveStoreBanners({ placement: "HOME_PROMO" });
-  const banners = (data?.data ?? []).filter((banner) => banner.imageUrl);
+  const banners = (data?.data ?? initialBanners).filter(
+    (banner) => banner.imageUrl,
+  );
   if (banners.length === 0) return null;
 
   const columns =
@@ -109,8 +124,8 @@ export function HomePromoBanners() {
           >
             <BannerImage
               banner={banner}
-              className="block"
-              imgClassName="h-44 w-full object-cover sm:h-56"
+              className="h-44 w-full sm:h-56"
+              sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
             />
             {banner.subtitle ? (
               <div className="px-4 py-3">
@@ -145,8 +160,8 @@ export function CategoryBanners({ categoryId }: { categoryId: string }) {
         >
           <BannerImage
             banner={banner}
-            className="block"
-            imgClassName="h-40 w-full object-cover sm:h-52"
+            className="h-40 w-full sm:h-52"
+            sizes="100vw"
           />
         </BannerLink>
       ))}
@@ -172,8 +187,8 @@ export function ProductBanners({ productId }: { productId: string }) {
         >
           <BannerImage
             banner={banner}
-            className="block"
-            imgClassName="h-28 w-full object-cover sm:h-36"
+            className="h-28 w-full sm:h-36"
+            sizes="(min-width: 1024px) 720px, 100vw"
           />
         </BannerLink>
       ))}

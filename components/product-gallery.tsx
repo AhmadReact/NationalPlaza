@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import type { ArtKind } from "@/lib/data";
 import { ApplianceArt } from "./appliance-art";
@@ -58,6 +59,7 @@ export function ProductGallery({
 
   const [active, setActive] = useState(0);
   const safeActive = Math.min(active, Math.max(images.length, artViews.length) - 1);
+  const activeImage = images[safeActive];
 
   return (
     <div>
@@ -68,17 +70,15 @@ export function ProductGallery({
             : artViews[safeActive]?.bg
         }`}
       >
-        {hasImages ? (
+        {hasImages && activeImage ? (
           <div className="absolute inset-6 sm:inset-10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={images[safeActive]?.url}
-              alt={
-                images[safeActive]?.alt ||
-                productName ||
-                "Product image"
-              }
-              className="h-full w-full object-contain object-center"
+            <Image
+              src={activeImage.url}
+              alt={activeImage.alt || productName || "Product image"}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-contain object-center"
             />
           </div>
         ) : (
@@ -116,11 +116,12 @@ export function ProductGallery({
                     : "border-transparent opacity-70 hover:opacity-100"
                 }`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={image.url}
                   alt={image.alt || productName || `Image ${i + 1}`}
-                  className="h-full w-full object-contain p-1.5"
+                  fill
+                  sizes="80px"
+                  className="object-contain p-1.5"
                 />
               </button>
             ))
