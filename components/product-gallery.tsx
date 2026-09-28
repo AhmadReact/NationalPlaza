@@ -2,10 +2,13 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import type { ProductVideo } from "@/app/store/customerAPI";
 import type { ArtKind } from "@/lib/data";
 import { ApplianceArt } from "./appliance-art";
-import { isMobileVideo, ProductIntroVideo } from "./product-intro-video";
+import {
+  isMobileVideo,
+  ProductIntroVideo,
+  type GalleryVideo,
+} from "./product-intro-video";
 
 type GalleryImage = {
   id: string;
@@ -35,7 +38,7 @@ export function ProductGallery({
   badge?: string;
   images?: GalleryImage[];
   productName?: string;
-  video?: ProductVideo | null;
+  video?: GalleryVideo | null;
 }) {
   const hasImages = images.length > 0;
 
@@ -78,21 +81,21 @@ export function ProductGallery({
         }`}
       >
         {showingVideo && video ? (
-          <div
-            className={
-              isMobileVideo(video)
-                ? "absolute inset-y-0 left-1/2 -translate-x-1/2"
-                : "absolute inset-x-0 top-1/2 w-full -translate-y-1/2"
-            }
-            style={{
-              aspectRatio: isMobileVideo(video) ? "9 / 16" : "16 / 9",
-            }}
-          >
-            <ProductIntroVideo
-              video={video}
-              productName={productName || "Product"}
-              fit="stage"
-            />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className={
+                isMobileVideo(video) ? "h-full max-w-full" : "w-full max-h-full"
+              }
+              style={{
+                aspectRatio: isMobileVideo(video) ? "9 / 16" : "16 / 9",
+              }}
+            >
+              <ProductIntroVideo
+                video={video}
+                productName={productName || "Product"}
+                fit="stage"
+              />
+            </div>
           </div>
         ) : hasImages && activeImage ? (
           <div className="absolute inset-6 sm:inset-10">

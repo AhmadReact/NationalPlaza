@@ -123,7 +123,7 @@ export default async function ProductPage({ params }: PageProps) {
   const { price, oldPrice, discount } = getProductPricing(product);
   const detail = buildDetailContent(product);
   const galleryImages = getProductGalleryImages(product);
-  const videoEmbedUrl = product.video
+  const playableVideo = product.video
     ? await playableEmbedUrl(product.video)
     : null;
   const inStock = product.stock > 0;
@@ -183,8 +183,12 @@ export default async function ProductPage({ params }: PageProps) {
             images={galleryImages}
             productName={product.name}
             video={
-              product.video && videoEmbedUrl
-                ? { ...product.video, embedUrl: videoEmbedUrl }
+              product.video && playableVideo
+                ? {
+                    ...product.video,
+                    embedUrl: playableVideo.embedUrl,
+                    portrait: playableVideo.portrait,
+                  }
                 : null
             }
           />

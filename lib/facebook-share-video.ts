@@ -95,19 +95,99 @@ async function followToPermalink(start: string): Promise<string | null> {
   return null;
 }
 
-async function withResolvedShareHref(video: ProductVideo): Promise<string> {
-  if (video.provider !== "FACEBOOK") return video.embedUrl;
+function requestBody(url: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    const request = get(
+      url,
+      {
+        headers: {
+          accept: "text/html",
+          "user-agent": "Mozilla/5.0",
+        },
+      },
+      (response) => {
+        if ((response.statusCode ?? 0) < 200 || (response.statusCode ?? 0) >= 300) {
+          response.resume();
+          finish(null);
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        let size = 0;
+        response.on("data", (chunk: Buffer) => {
+          size += chunk.length;
+          if (size > 400_000) {
+            response.destroy();
+            finish(Buffer.concat(chunks).toString("utf8"));
+            return;
+          }
+          chunks.push(chunk);
+        });
+        response.on("end", () => finish(Buffer.concat(chunks).toString("utf8")));
+        response.on("error", () => finish(null));
+      },
+    );
+
+    request.setTimeout(8000, () => {
+      request.destroy();
+      finish(null);
+    });
+    request.on("error", () => finish(null));
+  });
+}
+
+function portraitReelHref(html: string): string | null {
+  const aspectMatch = html.match(/"aspect_ratio":(\d+(?:\.\d+)?)/);
+  const aspect = aspectMatch ? Number(aspectMatch[1]) : null;
+  const reelMatch = html.match(
+    /"video_(?:url|path)":"(?:https:\\\/\\\/www\.facebook\.com)?(\\\/reel\\\/\d+\\\/?)"/,
+  );
+  const reelPath = reelMatch?.[1]?.replace(/\\\//g, "/");
+  const portrait = aspect !== null && Number.isFinite(aspect) && aspect < 0.9;
+  if (!reelPath && !portrait) return null;
+  if (!reelPath) return null;
+  return `https://www.facebook.com${reelPath}`;
+}
+
+export type PlayableEmbed = {
+  embedUrl: string;
+  portrait: boolean;
+};
+
+async function withResolvedShareHref(video: ProductVideo): Promise<PlayableEmbed> {
+  if (video.provider !== "FACEBOOK") {
+    return { embedUrl: video.embedUrl, portrait: false };
+  }
 
   const embed = asUrl(video.embedUrl);
-  const href = embed?.searchParams.get("href") ?? video.url;
-  const share = asUrl(href);
-  if (!embed || !share || !isShareUrl(share)) return video.embedUrl;
+  if (!embed) return { embedUrl: video.embedUrl, portrait: false };
 
-  const permalink = await followToPermalink(share.toString());
-  if (!permalink) return video.embedUrl;
+  const href = embed.searchParams.get("href") ?? video.url;
+  const source = asUrl(href);
+  if (source && isShareUrl(source)) {
+    const permalink = await followToPermalink(source.toString());
+    if (permalink) embed.searchParams.set("href", permalink);
+  }
 
-  embed.searchParams.set("href", permalink);
-  return embed.toString();
+  let embedUrl = embed.toString();
+  if (/\/share\/r\/|\/reel\//i.test(`${video.url} ${embedUrl}`)) {
+    return { embedUrl, portrait: true };
+  }
+
+  const html = await requestBody(embedUrl);
+  const reelHref = html ? portraitReelHref(html) : null;
+  if (!reelHref) return { embedUrl, portrait: false };
+
+  embed.searchParams.set("href", reelHref);
+  embedUrl = embed.toString();
+  return { embedUrl, portrait: true };
 }
 
 /** Facebook's player cannot open /share/ links. Resolve those to the video page. */
