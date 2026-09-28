@@ -16,6 +16,7 @@ import {
   type StoreProduct,
 } from "@/app/store/customerAPI";
 import { formatPrice } from "@/lib/data";
+import { playableEmbedUrl } from "@/lib/facebook-share-video";
 import { getDetailContent } from "@/lib/product-details";
 import { DetailTabs } from "@/components/detail-tabs";
 import { Footer } from "@/components/footer";
@@ -122,6 +123,9 @@ export default async function ProductPage({ params }: PageProps) {
   const { price, oldPrice, discount } = getProductPricing(product);
   const detail = buildDetailContent(product);
   const galleryImages = getProductGalleryImages(product);
+  const videoEmbedUrl = product.video
+    ? await playableEmbedUrl(product.video)
+    : null;
   const inStock = product.stock > 0;
   const [relatedProducts, reviewSummary] = await Promise.all([
     fetchRelatedStoreProducts(product.category?.id ?? "", product.id),
@@ -178,6 +182,11 @@ export default async function ProductPage({ params }: PageProps) {
             badge={product.isFeatured ? "Featured" : undefined}
             images={galleryImages}
             productName={product.name}
+            video={
+              product.video && videoEmbedUrl
+                ? { ...product.video, embedUrl: videoEmbedUrl }
+                : null
+            }
           />
 
           <div>

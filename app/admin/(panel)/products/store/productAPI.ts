@@ -56,6 +56,12 @@ export type ProductAttributeWrite = {
   optionIds: string[];
 };
 
+export type ProductVideo = {
+  provider: "YOUTUBE" | "FACEBOOK" | "INSTAGRAM";
+  url: string;
+  embedUrl: string;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -78,6 +84,7 @@ export type Product = {
   images: ProductImage[];
   thumbnail: ProductImage | null;
   specifications: ProductSpecification[];
+  video: ProductVideo | null;
   attributeValues?: ProductAttributeValue[];
   weightGrams?: number | null;
   createdAt: string;
@@ -106,6 +113,7 @@ export type CreateProductInput = {
   status?: ProductStatus;
   weightGrams?: number;
   attributeValues?: ProductAttributeWrite[];
+  videoUrl?: string;
 };
 
 export type UpdateProductInput = {
@@ -126,6 +134,7 @@ export type UpdateProductInput = {
   status?: ProductStatus;
   weightGrams?: number | null;
   attributeValues?: ProductAttributeWrite[];
+  videoUrl?: string | null;
 };
 
 export type ReplaceProductAttributesInput = {

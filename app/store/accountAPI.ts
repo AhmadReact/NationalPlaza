@@ -1,6 +1,10 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithInterceptor } from "@/lib/store/baseQuery";
-import type { StoreProduct, StoreProductRef } from "@/app/store/customerAPI";
+import type {
+  ProductVideo,
+  StoreProduct,
+  StoreProductRef,
+} from "@/app/store/customerAPI";
 
 export type ApiResponse<T> = {
   success: boolean;
@@ -105,6 +109,22 @@ function asRef(value: unknown, fallbackName = ""): StoreProductRef {
   return { id: "", name: fallbackName, slug: "" };
 }
 
+function asProductVideo(value: unknown): ProductVideo | null {
+  const rec = asRecord(value);
+  if (!rec) return null;
+  const provider = rec.provider;
+  if (
+    provider !== "YOUTUBE" &&
+    provider !== "FACEBOOK" &&
+    provider !== "INSTAGRAM"
+  ) {
+    return null;
+  }
+  if (typeof rec.url !== "string" || !rec.url) return null;
+  if (typeof rec.embedUrl !== "string" || !rec.embedUrl) return null;
+  return { provider, url: rec.url, embedUrl: rec.embedUrl };
+}
+
 function asProductArray(data: unknown): unknown[] {
   if (Array.isArray(data)) return data;
   const rec = asRecord(data);
@@ -148,6 +168,7 @@ export function unwrapAccountProduct(item: unknown): StoreProduct | null {
     specifications: Array.isArray(nested.specifications)
       ? (nested.specifications as StoreProduct["specifications"])
       : undefined,
+    video: asProductVideo(nested.video),
   };
 }
 

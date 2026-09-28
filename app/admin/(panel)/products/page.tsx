@@ -66,6 +66,7 @@ type ProductFormState = {
   isFeatured: boolean;
   status: ProductStatus;
   weightGrams: string;
+  videoUrl: string;
   images: File[];
   specs: SpecRow[];
   attributeValues: Record<string, string[]>;
@@ -87,6 +88,7 @@ const emptyForm: ProductFormState = {
   isFeatured: false,
   status: "ACTIVE",
   weightGrams: "",
+  videoUrl: "",
   images: [],
   specs: [],
   attributeValues: {},
@@ -389,6 +391,7 @@ export default function AdminProductsPage() {
       status: product.status || "ACTIVE",
       weightGrams:
         product.weightGrams != null ? String(product.weightGrams) : "",
+      videoUrl: product.video?.url ?? "",
       images: [],
       specs: [],
       attributeValues: selectionsFromAttributeValues(product.attributeValues),
@@ -570,6 +573,7 @@ export default function AdminProductsPage() {
       ? Number(weightGramsTrimmed)
       : undefined;
     const attributeValues = toAttributeWritePayload(form.attributeValues);
+    const videoUrl = form.videoUrl.trim();
 
     try {
       if (dialogMode === "create") {
@@ -590,6 +594,7 @@ export default function AdminProductsPage() {
           status: form.status,
           weightGrams,
           attributeValues,
+          ...(videoUrl ? { videoUrl } : {}),
         }).unwrap();
 
         const productId = result.data.id;
@@ -648,6 +653,7 @@ export default function AdminProductsPage() {
           status: form.status,
           weightGrams: weightGramsTrimmed ? Number(weightGramsTrimmed) : null,
           attributeValues,
+          videoUrl: videoUrl || null,
         }).unwrap();
 
         if (form.images.length > 0) {
@@ -1533,6 +1539,25 @@ export default function AdminProductsPage() {
                   className="w-full resize-y rounded-xl border-2 border-brand-900/10 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-600"
                   placeholder="Noise-cancelling over-ear headphones."
                 />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Intro video
+                </span>
+                <input
+                  type="url"
+                  inputMode="url"
+                  value={form.videoUrl}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, videoUrl: e.target.value }))
+                  }
+                  className="w-full rounded-xl border-2 border-brand-900/10 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-600"
+                  placeholder="YouTube, Facebook, or Instagram link"
+                />
+                <span className="mt-1 block text-xs text-slate-500">
+                  Optional public link. Clear the field and save to remove it.
+                </span>
               </label>
 
               <div>

@@ -36,6 +36,12 @@ export type StoreProductSpecification = {
   sortOrder: number;
 };
 
+export type ProductVideo = {
+  provider: "YOUTUBE" | "FACEBOOK" | "INSTAGRAM";
+  url: string;
+  embedUrl: string;
+};
+
 export type StoreProduct = {
   id: string;
   name: string;
@@ -52,6 +58,7 @@ export type StoreProduct = {
   images: StoreProductImage[];
   thumbnail: StoreProductImage | null;
   specifications?: StoreProductSpecification[];
+  video: ProductVideo | null;
   createdAt?: string;
   updatedAt?: string;
 };

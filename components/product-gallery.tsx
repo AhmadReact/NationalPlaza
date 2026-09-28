@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import type { ProductVideo } from "@/app/store/customerAPI";
 import type { ArtKind } from "@/lib/data";
 import { ApplianceArt } from "./appliance-art";
+import { isMobileVideo, ProductIntroVideo } from "./product-intro-video";
 
 type GalleryImage = {
   id: string;
@@ -25,6 +27,7 @@ export function ProductGallery({
   badge,
   images = [],
   productName,
+  video = null,
 }: {
   kind: ArtKind;
   tint: string;
@@ -32,6 +35,7 @@ export function ProductGallery({
   badge?: string;
   images?: GalleryImage[];
   productName?: string;
+  video?: ProductVideo | null;
 }) {
   const hasImages = images.length > 0;
 
@@ -57,20 +61,40 @@ export function ProductGallery({
     },
   ];
 
+  const imageCount = hasImages ? images.length : artViews.length;
+  const videoIndex = imageCount;
+  const slideCount = imageCount + (video ? 1 : 0);
+
   const [active, setActive] = useState(0);
-  const safeActive = Math.min(active, Math.max(images.length, artViews.length) - 1);
-  const activeImage = images[safeActive];
+  const safeActive = Math.min(active, Math.max(slideCount, 1) - 1);
+  const showingVideo = Boolean(video) && safeActive === videoIndex;
+  const activeImage = hasImages && !showingVideo ? images[safeActive] : undefined;
 
   return (
     <div>
       <div
         className={`relative aspect-square w-full overflow-hidden rounded-3xl border border-slate-200 shadow-sm ${
-          hasImages
-            ? "bg-white"
-            : artViews[safeActive]?.bg
+          showingVideo || hasImages ? "bg-white" : artViews[safeActive]?.bg
         }`}
       >
-        {hasImages && activeImage ? (
+        {showingVideo && video ? (
+          <div
+            className={
+              isMobileVideo(video)
+                ? "absolute inset-y-0 left-1/2 -translate-x-1/2"
+                : "absolute inset-x-0 top-1/2 w-full -translate-y-1/2"
+            }
+            style={{
+              aspectRatio: isMobileVideo(video) ? "9 / 16" : "16 / 9",
+            }}
+          >
+            <ProductIntroVideo
+              video={video}
+              productName={productName || "Product"}
+              fit="stage"
+            />
+          </div>
+        ) : hasImages && activeImage ? (
           <div className="absolute inset-6 sm:inset-10">
             <Image
               src={activeImage.url}
@@ -144,6 +168,27 @@ export function ProductGallery({
                 />
               </button>
             ))}
+        {video ? (
+          <button
+            type="button"
+            onClick={() => setActive(videoIndex)}
+            aria-label={`${productName || "Product"} video`}
+            className={`relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border-2 bg-brand-950 text-white transition-all ${
+              showingVideo
+                ? "border-brand-700 shadow-md scale-105"
+                : "border-transparent opacity-70 hover:opacity-100"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-8 w-8"
+              aria-hidden="true"
+            >
+              <path d="M8 5.14v13.72a1 1 0 0 0 1.54.84l10.2-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14Z" />
+            </svg>
+          </button>
+        ) : null}
       </div>
     </div>
   );
