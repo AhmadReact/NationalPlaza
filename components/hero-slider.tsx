@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { heroSlides } from "@/lib/data";
 import { ApplianceArt } from "./appliance-art";
 import {
-  BannerImage,
   BannerLink,
   useLiveStoreBanners,
 } from "@/components/storefront-banners";
@@ -35,6 +34,50 @@ export function HeroSlider({
   }
 
   return <StaticHeroSlider />;
+}
+
+function HeroBannerImage({
+  banner,
+  priority = false,
+}: {
+  banner: Banner;
+  priority?: boolean;
+}) {
+  const alt = banner.alt ?? banner.title ?? "";
+  const desktop = banner.imageUrl;
+  const mobile = banner.mobileImageUrl;
+  if (!desktop) return null;
+
+  if (!mobile) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={desktop}
+        alt={alt}
+        className="block h-auto w-full"
+        fetchPriority={priority ? "high" : "auto"}
+      />
+    );
+  }
+
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={mobile}
+        alt={alt}
+        className="block h-auto w-full sm:hidden"
+        fetchPriority={priority ? "high" : "auto"}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={desktop}
+        alt=""
+        className="hidden h-auto w-full sm:block"
+        fetchPriority={priority ? "high" : "auto"}
+      />
+    </>
+  );
 }
 
 function CmsHeroSlider({ banners }: { banners: Banner[] }) {
@@ -72,25 +115,12 @@ function CmsHeroSlider({ banners }: { banners: Banner[] }) {
 
   return (
     <section aria-label="Special offers" className="relative">
-      <div className="relative h-[540px] overflow-hidden bg-black sm:h-[600px] lg:h-[640px]">
+      <div className="relative overflow-hidden bg-black">
         {banners.map((banner, i) =>
           i === index ? (
-            <div key={banner.id} className="absolute inset-0">
-              <div className="absolute inset-0 mx-auto max-w-[88rem] px-4 lg:px-8">
-                <BannerLink
-                  banner={banner}
-                  className="relative block h-full w-full"
-                >
-                  <BannerImage
-                    banner={banner}
-                    priority={i === 0}
-                    fit="cover"
-                    sizes="(min-width: 1280px) 1200px, 100vw"
-                    className="h-full w-full"
-                  />
-                </BannerLink>
-              </div>
-            </div>
+            <BannerLink key={banner.id} banner={banner} className="block w-full">
+              <HeroBannerImage banner={banner} priority={i === 0} />
+            </BannerLink>
           ) : null,
         )}
 
