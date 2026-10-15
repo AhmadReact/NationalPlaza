@@ -4,6 +4,10 @@ import { resolveApiOrigin } from "./lib/api/origin";
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.100.14"],
   images: {
+    // Remote catalog photos are resized by Supabase. The Vercel optimizer
+    // answers 402 after the image quota is spent, and those cards render blank.
+    loader: "custom",
+    loaderFile: "./lib/image-loader.ts",
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
