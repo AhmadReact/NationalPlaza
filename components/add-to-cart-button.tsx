@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { addToCart } from "@/app/store/cartThunk";
 import { useAppDispatch } from "@/lib/store/hooks";
 
@@ -50,6 +51,55 @@ export function AddToCartButton({
       className={className}
     >
       {pending ? "Adding…" : added ? successLabel : idleLabel}
+    </button>
+  );
+}
+
+type BuyNowButtonProps = {
+  productId: string;
+  quantity?: number;
+  disabled?: boolean;
+  className?: string;
+  idleLabel?: ReactNode;
+  pendingLabel?: ReactNode;
+};
+
+export function BuyNowButton({
+  productId,
+  quantity = 1,
+  disabled = false,
+  className,
+  idleLabel = "Buy It Now",
+  pendingLabel = "Taking you to checkout…",
+}: BuyNowButtonProps) {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+
+  const onClick = async (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!productId || pending || disabled) return;
+
+    setPending(true);
+    try {
+      await dispatch(
+        addToCart({ productId, quantity, silentSuccess: true }),
+      ).unwrap();
+      router.push("/checkout");
+    } catch {
+      setPending(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || pending || !productId}
+      className={className}
+    >
+      {pending ? pendingLabel : idleLabel}
     </button>
   );
 }

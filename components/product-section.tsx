@@ -52,7 +52,7 @@ export function ProductSection({
 
         <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-5 lg:grid-cols-4">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} showBuyNow />
           ))}
         </div>
       </div>

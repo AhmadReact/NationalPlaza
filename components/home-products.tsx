@@ -23,7 +23,7 @@ export function HomeProducts({
           <div className="h-7 w-40 animate-pulse rounded bg-slate-200 sm:h-8 sm:w-48" />
           <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-5 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <ProductCardSkeleton key={i} />
+              <ProductCardSkeleton key={i} showBuyNow />
             ))}
           </div>
         </div>

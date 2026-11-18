@@ -3,11 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatPrice, type Product } from "@/lib/data";
-import { AddToCartButton } from "./add-to-cart-button";
+import { AddToCartButton, BuyNowButton } from "./add-to-cart-button";
 import { ApplianceArt } from "./appliance-art";
 import { WishlistButton } from "./wishlist-button";
 
-export function ProductCardSkeleton() {
+export function ProductCardSkeleton({
+  showBuyNow = false,
+}: {
+  showBuyNow?: boolean;
+}) {
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl">
       <div className="aspect-square animate-pulse bg-slate-100" />
@@ -18,6 +22,9 @@ export function ProductCardSkeleton() {
         <div className="mt-auto pt-2.5 sm:pt-3">
           <div className="h-5 w-16 animate-pulse rounded bg-slate-200 sm:h-6 sm:w-24" />
           <div className="mt-2 h-8 w-full animate-pulse rounded-lg bg-slate-200 sm:mt-3 sm:h-10 sm:rounded-xl" />
+          {showBuyNow ? (
+            <div className="mt-1.5 h-8 w-full animate-pulse rounded-lg bg-slate-200 sm:mt-2 sm:h-10 sm:rounded-xl" />
+          ) : null}
         </div>
       </div>
     </article>
@@ -27,9 +34,11 @@ export function ProductCardSkeleton() {
 export function ProductCard({
   product,
   showWishlist = true,
+  showBuyNow = false,
 }: {
   product: Product;
   showWishlist?: boolean;
+  showBuyNow?: boolean;
 }) {
   const href = product.href || `/products/${product.slug || product.id}`;
   const cartProductId = product.productId || product.id;
@@ -142,6 +151,25 @@ export function ProductCard({
             }
             className="mt-2 w-full rounded-lg bg-brand-900 py-2 text-xs font-semibold text-white transition-all hover:bg-brand-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:mt-3 sm:rounded-xl sm:py-2.5 sm:text-sm"
           />
+          {showBuyNow ? (
+            <BuyNowButton
+              productId={cartProductId}
+              disabled={outOfStock || !product.price}
+              idleLabel={
+                <>
+                  <span className="sm:hidden">Buy now</span>
+                  <span className="hidden sm:inline">Buy It Now</span>
+                </>
+              }
+              pendingLabel={
+                <>
+                  <span className="sm:hidden">…</span>
+                  <span className="hidden sm:inline">Taking you to checkout…</span>
+                </>
+              }
+              className="mt-1.5 w-full rounded-lg bg-gold-400 py-2 text-xs font-semibold text-brand-950 transition-all hover:bg-gold-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:mt-2 sm:rounded-xl sm:py-2.5 sm:text-sm"
+            />
+          ) : null}
         </div>
       </div>
     </article>
